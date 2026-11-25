@@ -1,0 +1,190 @@
+// Alle Texte des Spiels auf Deutsch. Die Schlüssel sind dieselben wie in texts.en.ts.
+export const de: Record<string, string> = {
+  "game.name": "Blocktown",
+  "game.tagline": "Baue eine Stadt, Block für Block",
+  "ach.toast": "Erfolg: {name}",
+
+  // ---- allgemein
+  "ui.cancel": "Abbrechen", "ui.build": "Bauen", "ui.undo": "Zurück", "ui.openLine": "Linie öffnen", "ui.close": "Schliessen", "ui.yes": "Ja", "ui.no": "Nein",
+  "ui.ok": "OK", "ui.back": "Zurück", "ui.locked": "Frei bei {name}", "ui.perDay": "pro Tag", "ui.day": "Tag {n}", "ui.year": "Jahr {n}",
+  "ui.free": "gratis", "ui.none": "Keine", "ui.on": "An", "ui.off": "Aus", "ui.more": "Mehr", "ui.demolish": "Abreissen", "ui.goThere": "Zeigen",
+  "ui.pause": "Pause", "ui.speed": "Tempo {n}", "ui.menu": "Menü",
+
+  // ---- Modi
+  "mode.chill": "Chill", "mode.normal": "Normal", "mode.hard": "Schwer",
+  "mode.chill.d": "Unendlich Geld, alles freigeschaltet, keine Katastrophen. Einfach bauen. Keine Bestenlisten.",
+  "mode.normal.d": "Fang klein an. Neue Gebäude werden frei, wenn deine Stadt wächst. Zählt für die Bestenlisten.",
+  "mode.hard.d": "Wenig Geld, höhere Kosten, mehr Katastrophen, und du kannst pleitegehen. Eigene Bestenliste.",
+  "size.small": "Klein", "size.medium": "Mittel", "size.large": "Gross",
+
+  // ---- Werkzeugleiste
+  "cat.inspect": "Ansehen", "cat.roads": "Strassen", "cat.zones": "Zonen", "cat.power": "Strom", "cat.water": "Wasser", "cat.services": "Dienste",
+  "cat.edu": "Schulen", "cat.parks": "Parks", "cat.transit": "ÖV", "cat.bulldoze": "Abreissen", "cat.views": "Ansichten",
+  "tool.straight": "Gerade", "tool.curve": "Kurve", "tool.upgrade": "Typ ändern",
+  "tool.brush": "Pinsel", "tool.dezone": "Zone entfernen", "tool.busLine": "Buslinie", "tool.metroLine": "Metrolinie", "tool.lines": "Linien",
+
+  // ---- Strassen
+  "r.street": "Strasse", "r.avenue": "Allee", "r.highway": "Autobahn",
+  "rd.street": "Zwei Spuren. Gebäude wachsen daran.", "rd.avenue": "Vier Spuren für viel Verkehr. Gebäude wachsen daran.", "rd.highway": "Schnell, für lange Fahrten. Keine Gebäude daran.",
+
+  // ---- Zonen
+  "z.none": "Keine Zone", "z.resLow": "Häuser", "z.resHigh": "Wohnblöcke", "z.comLow": "Läden", "z.comHigh": "Einkaufszentren", "z.industry": "Industrie",
+  "z.office": "Büros", "z.farm": "Bauernhöfe", "z.forestry": "Forstwirtschaft", "z.ore": "Bergbau", "z.oil": "Öl",
+  "zd.resLow": "Zuhause für einige Familien.", "zd.resHigh": "Hohe Häuser für viele Leute. Brauchen gute Dienste, um zu wachsen.", "zd.comLow": "Kleine Läden. Arbeit und Orte zum Einkaufen.",
+  "zd.comHigh": "Grosse Geschäfte und Hotels. Viele Jobs.", "zd.industry": "Fabriken. Viele einfache Jobs, aber schmutzig und laut: Halte sie von Wohnhäusern fern.",
+  "zd.office": "Saubere Jobs für Leute mit guter Bildung.", "zd.farm": "Baut Pflanzen an. Nur auf fruchtbarem Boden.", "zd.forestry": "Erntet Holz. Nur im Wald.",
+  "zd.ore": "Gräbt Erz aus. Nur wo Erz im Boden ist. Schmutzig.", "zd.oil": "Pumpt Öl. Nur wo Öl im Boden ist. Schmutzig.",
+  "level": "Stufe {n}",
+
+  // ---- Gebäude, die du selbst baust
+  "b.wind": "Windrad", "b.coal": "Kohlekraftwerk", "b.solar": "Solarpark", "b.nuclear": "Atomkraftwerk",
+  "b.pump": "Wasserpumpe", "b.tower": "Wasserturm", "b.outlet": "Abwasserrohr", "b.treatment": "Kläranlage",
+  "b.landfill": "Mülldeponie", "b.recycling": "Recyclinghof", "b.incinerator": "Müllverbrennung",
+  "b.police": "Polizeiwache", "b.policeHq": "Polizeizentrale", "b.fire": "Feuerwache", "b.fireHq": "Feuerwehrzentrale",
+  "b.clinic": "Praxis", "b.hospital": "Spital", "b.school": "Primarschule", "b.highSchool": "Gymnasium", "b.university": "Universität",
+  "b.park": "Kleiner Park", "b.playground": "Spielplatz", "b.plaza": "Platz", "b.bigPark": "Stadtpark", "b.stadium": "Stadion",
+  "b.busDepot": "Busdepot", "b.metro": "Metro-Station",
+  "bd.wind": "Saubere Energie. Mehr Strom bei Wind, steht bei Sturm still.", "bd.coal": "Viel billiger Strom und viel Rauch.",
+  "bd.solar": "Saubere Energie. Weniger Strom bei Wolken und im Winter.", "bd.nuclear": "Riesige Menge sauberer Strom. Der Betrieb kostet viel.",
+  "bd.pump": "Pumpt Wasser aus Fluss, See oder Meer. Muss am Wasser stehen.", "bd.tower": "Wasser überall, aber nicht viel.",
+  "bd.outlet": "Leitet Abwasser ins Wasser. Muss am Wasser stehen. Stinkt.", "bd.treatment": "Reinigt viel Abwasser ohne Gestank. Muss am Wasser stehen.",
+  "bd.landfill": "Nimmt den Müll der Stadt auf. Daneben will niemand wohnen.", "bd.recycling": "Geht sauber mit Müll um.", "bd.incinerator": "Verbrennt viel Müll und macht daraus Strom.",
+  "bd.police": "Sorgt in der Umgebung für Sicherheit.", "bd.policeHq": "Sorgt in einem grossen Teil der Stadt für Sicherheit.",
+  "bd.fire": "Macht Brände in der Nähe selten und schickt Löschwagen.", "bd.fireHq": "Schützt einen grossen Teil der Stadt vor Feuer.",
+  "bd.clinic": "Gesundheit für das Quartier.", "bd.hospital": "Gesundheit für einen grossen Teil der Stadt.",
+  "bd.school": "Kinder in der Nähe lernen lesen und rechnen. Gebildete Leute finden bessere Jobs.", "bd.highSchool": "Der nächste Schritt nach der Primarschule. Nötig für Büros.",
+  "bd.university": "Die beste Bildung. Die Studenten leiten die Büros und Fabriken von morgen.",
+  "bd.park": "Ein bisschen Grün. Leute in der Nähe sind glücklicher, und der Boden wird mehr wert.", "bd.playground": "Familien wohnen gern in der Nähe.",
+  "bd.plaza": "Ein Treffpunkt mit Brunnen.", "bd.bigPark": "Ein grosser Park mit Teich. Macht ein ganzes Viertel schöner.", "bd.stadium": "Ein Ausflug für die ganze Stadt.",
+  "bd.busDepot": "Nötig für Buslinien. Jedes Depot hat Platz für 16 Busse.", "bd.metro": "Eine Haltestelle der Metro. Baue mindestens zwei und verbinde sie mit einer Metrolinie.",
+  "stat.makesPower": "Strom", "stat.makesWater": "Wasser", "stat.sewage": "Abwasser", "stat.garbage": "Müll", "stat.radius": "Reichweite",
+  "stat.seats": "Schüler", "stat.beds": "Patienten", "stat.upkeep": "Unterhalt", "stat.jobs": "Jobs",
+
+  // ---- Infoansichten
+  "view.none": "Normal", "view.traffic": "Verkehr", "view.value": "Bodenwert", "view.pollution": "Verschmutzung", "view.noise": "Lärm",
+  "view.police": "Polizei", "view.fire": "Brandschutz", "view.health": "Gesundheit", "view.school": "Bildung", "view.charm": "Parks",
+  "view.soil": "Fruchtbarer Boden", "view.forest": "Wald", "view.ore": "Erz", "view.oil": "Öl", "view.flood": "Hochwassergefahr",
+
+  // ---- Hinweise unter den Werkzeugen
+  "hint.roadStart": "Tippe dort, wo die Strasse beginnt. Sie rastet an anderen Strassen ein.", "hint.roadNext": "Tippe jetzt, wo sie endet.", "hint.roadBend": "Tippe dort, wo die Strasse abbiegt.",
+  "hint.roadEnd": "{len} m", "hint.upgrade": "Tippe auf eine Strasse, um sie in diesen Typ zu ändern.", "hint.upgradeCost": "Diese Strasse ändern",
+  "hint.zone": "Male entlang der Strassen. Gebäude wachsen von selbst.", "hint.dezone": "Male über Zonen, um sie zu entfernen.",
+  "hint.place": "Wähle einen Platz neben einer Strasse.", "hint.placeShore": "Wähle einen Platz neben einer Strasse, nahe am Wasser.", "hint.confirmPlace": "Hier bauen?",
+  "hint.bulldoze": "Tippe auf eine Strasse oder ein Gebäude, um es abzureissen.", "hint.bus": "Tippe auf Strassen, um Haltestellen zu setzen (bisher {n}). Der Bus fährt sie der Reihe nach ab, immer im Kreis.",
+  "hint.metro": "Tippe die Metro-Stationen der Reihe nach an (bisher {n}).",
+
+  // ---- warum etwas nicht geht
+  "why.short": "Zu kurz", "why.outside": "Ausserhalb der Karte", "why.tooClose": "Zu nah an einer anderen Strasse", "why.angle": "Strassen treffen in einem zu flachen Winkel aufeinander",
+  "why.sharp": "Die Kurve ist zu eng", "why.steep": "Zu steil", "why.fixed": "Diese Autobahn kann nicht geändert werden", "why.building": "Ein Gebäude ist im Weg",
+  "why.locked": "Noch nicht freigeschaltet", "why.money": "Nicht genug Geld", "why.noRoad": "Braucht eine Strasse daneben", "why.water": "Zu nah am Wasser",
+  "why.shore": "Muss am Wasser stehen", "why.same": "Schon dieser Typ", "why.stops": "Eine Linie braucht mindestens zwei Haltestellen", "why.lines": "Keine weiteren Linien möglich",
+  "why.depot": "Baue zuerst ein Busdepot", "why.buses": "Keine freien Busse: Baue ein weiteres Depot", "why.needStation": "Tippe auf eine Metro-Station", "why.needRoad": "Tippe auf eine Strasse oder eine Allee",
+
+  // ---- Probleme von Gebäuden
+  "prob.noRoad": "Keine Strasse zur Autobahn", "prob.noPower": "Kein Strom", "prob.noWater": "Kein Wasser", "prob.sewage": "Abwasser staut sich",
+  "prob.abandoned": "Verlassen", "prob.fire": "Es brennt!", "prob.burnt": "Zerstört", "prob.flood": "Überflutet", "prob.unhappy": "Die Leute sind hier unglücklich",
+  "grow.noRoad": "Hier wächst nichts: keine Strasse.", "grow.noHighway": "Hier wächst nichts: Die Strasse führt nicht zur Autobahn.",
+  "grow.noResource": "Hier wächst nichts: Dem Land fehlt, was diese Zone braucht. Sieh dir die Ansichten an.", "grow.noDemand": "Hier wächst noch nichts: Die Stadt braucht gerade nicht mehr von dieser Zone.",
+  "grow.soon": "Hier wächst bald ein Gebäude.",
+
+  // ---- Meldungen
+  "note.milestone": "Deine Stadt ist jetzt: {name}! Belohnung: {reward}. Neue Sachen sind frei.", "note.loanPaid": "Ein Kredit ist abbezahlt.",
+  "note.broke": "Die Stadt hat kein Geld mehr. Erhöhe die Steuern, kürze Budgets oder nimm einen Kredit.", "note.bankrupt": "Die Stadt ist pleite. Sie zählt nicht mehr für die Bestenlisten.",
+  "note.heat": "Eine Hitzewelle: Die Leute brauchen mehr Wasser und Strom, und Pumpen liefern weniger.", "note.cold": "Ein Kälteeinbruch: Heizen braucht viel mehr Strom.",
+  "note.storm": "Ein Sturm zieht auf. Windräder stehen still.", "note.fire": "Feuer! Ein Löschwagen ist unterwegs.", "note.fireNoHelp": "Feuer! Keine Feuerwache kommt hin.",
+  "note.fireOut": "Das Feuer ist aus.", "note.stormDamage": "Der Sturm hat ein Gebäude zerstört.", "note.floodWarn": "Das Wasser steigt! Tiefes Land am Wasser wird überflutet.",
+  "note.flooded": "{n} Gebäude stehen unter Wasser.", "note.floodOver": "Das Hochwasser ist vorbei.", "note.lineOpen": "Die Linie ist offen.",
+  "note.saved": "Stadt gespeichert.", "note.saveFull": "Nicht gespeichert: Der Speicher ist voll. Lösche eine andere Stadt.", "note.saveError": "Die Stadt konnte nicht gespeichert werden.",
+  "note.unranked": "Chill-Modus: keine Bestenlisten.", "note.welcomeBack": "Willkommen zurück in {name}.",
+  "confirm.demolish": "{name} abreissen?", "confirm.deleteCity": "{name} für immer löschen?", "confirm.newCity": "Diese Stadt verlassen? Sie wird vorher gespeichert.",
+  "confirm.deleteLine": "Diese Linie schliessen?",
+
+  // ---- Meilensteine
+  "ms.0": "Lager", "ms.1": "Weiler", "ms.2": "Dorf", "ms.3": "Grosses Dorf", "ms.4": "Städtchen", "ms.5": "Kleinstadt", "ms.6": "Stadt",
+  "ms.7": "Grossstadt", "ms.8": "Regionalzentrum", "ms.9": "Metropole", "ms.10": "Hauptstadt", "ms.11": "Megastadt", "ms.12": "Megalopolis",
+  "ms.title": "Meilensteine", "ms.next": "Als Nächstes: {name} bei {n} Einwohnern", "ms.unlocks": "Schaltet frei", "ms.reached": "Erreicht", "ms.all": "Du hast jeden Meilenstein erreicht.",
+  "ms.chill": "Im Chill-Modus ist von Anfang an alles freigeschaltet.",
+  "feat.water": "Wasser und Abwasser", "feat.garbage": "Müll", "feat.budget": "Steuern und Budgets", "feat.loans": "Kredite", "feat.health": "Gesundheit",
+  "feat.edu": "Schulen", "feat.safety": "Polizei und Brandschutz", "feat.fires": "Brände können ausbrechen", "feat.transit": "Buslinien", "feat.industry": "Bauernhöfe und Forstwirtschaft",
+  "feat.storms": "Stürme und Hochwasser", "feat.metro": "Metro",
+
+  // ---- obere Leiste
+  "hud.pop": "Einwohner", "hud.money": "Geld", "hud.happy": "Zufriedenheit", "hud.traffic": "Verkehr", "hud.demand": "Was die Stadt will",
+  "hud.r": "Wohnen", "hud.c": "Läden", "hud.i": "Industrie", "hud.o": "Büros",
+  "season.spring": "Frühling", "season.summer": "Sommer", "season.autumn": "Herbst", "season.winter": "Winter",
+  "sky.clear": "Klar", "sky.cloudy": "Bewölkt", "sky.rain": "Regen", "sky.storm": "Sturm", "sky.fog": "Nebel", "sky.snow": "Schnee",
+
+  // ---- Fenster
+  "panel.budget": "Geld", "panel.city": "Stadt", "panel.transit": "Bus und Metro", "panel.options": "Optionen", "panel.help": "Spielanleitung", "panel.goods": "Waren",
+  "budget.income": "Einnahmen pro Tag", "budget.expense": "Kosten pro Tag", "budget.net": "Übrig pro Tag", "budget.taxes": "Steuern", "budget.services": "Budgets",
+  "budget.servicesHint": "Mehr Geld lässt einen Dienst weiter reichen und mehr leisten. Weniger spart Geld.", "budget.loans": "Kredite",
+  "budget.loanOffer": "{amount}, zurückzahlen in {days} Tagen ({total} insgesamt)", "budget.take": "Nehmen", "budget.repay": "Jetzt abzahlen ({left})",
+  "budget.loanLeft": "Noch {left}, {perDay} pro Tag", "budget.noLoans": "Kredite gibt es, wenn deine Stadt ein Dorf ist.", "budget.maxLoans": "Höchstens drei Kredite.",
+  "budget.locked": "Steuern und Budgets gibt es, wenn deine Stadt ein Dorf ist.",
+  "inc.r": "Wohnen", "inc.c": "Läden", "inc.i": "Industrie", "inc.o": "Büros", "inc.fares": "Tickets", "inc.trade": "Exporte",
+  "exp.roads": "Strassen", "exp.loans": "Kredite", "exp.power": "Strom", "exp.water": "Wasser", "exp.garbage": "Müll", "exp.police": "Polizei", "exp.fire": "Feuerwehr",
+  "exp.health": "Gesundheit", "exp.edu": "Schulen", "exp.parks": "Parks", "exp.transit": "Bus und Metro",
+  "city.score": "Stadtpunkte", "city.scoreHow": "Einwohner × Zufriedenheit × Verkehr × Bildung", "city.scoreParts": "{pop} × {happy} × {traffic} × {school}",
+  "city.people": "Leute", "city.workers": "Arbeitende", "city.jobs": "Jobs", "city.unemployed": "Ohne Arbeit", "city.education": "Bildung",
+  "edu.0": "Keine Schule", "edu.1": "Primarschule", "edu.2": "Gymnasium", "edu.3": "Universität",
+  "city.supply": "Versorgung", "city.power": "Strom", "city.water": "Wasser", "city.sewage": "Abwasser", "city.garbage": "Müll", "city.schools": "Schulplätze",
+  "city.health": "Gesundheit", "city.cleanPower": "Saubere Energie", "city.history": "Einwohner im Lauf der Zeit", "city.map": "Karte", "city.seed": "Kartencode: {seed}",
+  "city.mode": "Modus", "city.best": "Meiste Einwohner bisher: {n}", "city.land": "Bodenwert",
+  "goods.title": "In der Stadt hergestellt", "goods.hint": "Fabriken verdienen mehr mit Rohstoffen vom eigenen Land, Läden mit Waren aus eigenen Fabriken. Was fehlt, kommt per Lastwagen über die Autobahn.",
+  "goods.crops": "Pflanzen", "goods.wood": "Holz", "goods.ore": "Erz", "goods.oil": "Öl", "goods.goods": "Waren für Läden", "goods.makes": "{make} von {need} nötig",
+  "transit.none": "Noch keine Linien. Baue ein Busdepot und zeichne dann eine Buslinie entlang deiner Strassen.", "transit.bus": "Buslinie {n}", "transit.metro": "Metrolinie {n}",
+  "transit.riders": "{n} Fahrgäste pro Tag", "transit.vehicles": "Fahrzeuge", "transit.stops": "{n} Haltestellen", "transit.buses": "Busse im Einsatz: {used} von {all}",
+  "transit.close": "Linie schliessen", "transit.full": "Voll! Füge Fahrzeuge hinzu.", "transit.total": "{n} Fahrgäste pro Tag insgesamt",
+  "insp.residents": "{n} von {cap} Einwohnern", "insp.workers": "{n} von {cap} Jobs besetzt", "insp.happy": "Zufriedenheit", "insp.value": "Bodenwert", "insp.access": "Strassen",
+  "insp.eff": "Läuft mit", "insp.works": "Arbeitet mit {n}%", "insp.road": "{len} m lang", "insp.jam": "Verkehr", "insp.jamFree": "fliesst", "insp.jamSlow": "langsam", "insp.jamStuck": "Stau",
+  "insp.bridge": "Brücke", "insp.change": "Ändern in", "insp.zoneEmpty": "Leeres Grundstück", "insp.pollution": "Verschmutzung", "insp.noise": "Lärm", "insp.services": "Dienste in der Nähe",
+  "insp.construction": "Im Bau", "insp.givenHighway": "Diese Autobahn war schon vor deiner Stadt da. Sie kann nicht geändert werden, aber du kannst Strassen an sie anschliessen.",
+
+  // ---- Optionen
+  "opt.language": "Sprache", "opt.sound": "Soundeffekte", "opt.ambience": "Hintergrundgeräusche", "opt.quality": "Grafik", "opt.quality.low": "Schnell", "opt.quality.medium": "Ausgewogen",
+  "opt.quality.high": "Schön (mit Schatten)", "opt.dayNight": "Tag und Nacht", "opt.disasters": "Katastrophen", "opt.disastersChill": "Nie im Chill-Modus.",
+  "opt.advisor": "Berater", "opt.autosave": "Die Stadt wird jede Minute von selbst gespeichert.", "opt.cameraPad": "Kamera-Tasten",
+
+  // ---- Menüs
+  "menu.continue": "Weiter", "menu.new": "Neue Stadt", "menu.load": "Meine Städte", "menu.options": "Optionen", "menu.help": "Spielanleitung", "menu.resume": "Zurück zur Stadt",
+  "menu.save": "Speichern", "menu.main": "Hauptmenü", "menu.fullscreen": "Vollbild",
+  "new.title": "Neue Stadt", "new.name": "Name", "new.mode": "Modus", "new.size": "Kartengrösse", "new.seed": "Kartencode", "new.seedHint": "Derselbe Code ergibt dasselbe Land. Teile ihn mit Freunden!",
+  "new.roll": "Andere Karte", "new.start": "Stadt gründen", "new.noSlot": "Du hast schon drei Städte. Lösche eine, um eine neue zu starten.",
+  "load.title": "Meine Städte", "load.empty": "Noch keine Städte.", "load.info": "{pop} Einwohner · Tag {day} · {mode}", "load.play": "Spielen", "load.delete": "Löschen",
+  "over.title": "Pleite", "over.text": "Der Stadt ging zu lange das Geld aus. Du kannst hier weiterbauen, aber sie zählt nicht mehr für die Bestenlisten.", "over.keep": "Weiterbauen",
+
+  // ---- Berater
+  "adv.name": "Berater",
+  "adv.start": "Willkommen im Rathaus! Eine Autobahn führt schon durchs Land. Wähle Strassen und zeichne eine Strasse, die an der Autobahn beginnt.",
+  "adv.zoneHomes": "Gute Strasse! Wähle jetzt Zonen und male Häuser daran. Die Leute bauen dort von selbst ihre Zuhause.",
+  "adv.zoneJobs": "Die Leute brauchen Arbeit und Läden. Male ein paar Läden und etwas abseits der Häuser Industrie: Fabriken rauchen.",
+  "adv.power": "Die Gebäude haben keinen Strom. Baue ein Windrad oder ein Kohlekraftwerk neben eine Strasse. Der Strom läuft entlang der Strassen.",
+  "adv.morePower": "Der Strom reicht nicht für alle. Baue mehr Kraftwerke.",
+  "adv.grow": "Es klappt! Baue weiter Strassen und Zonen. Achte auf die Balken oben: Sie zeigen, wovon die Stadt mehr will.",
+  "adv.water": "Deine Stadt braucht jetzt Wasser. Baue eine Wasserpumpe und ein Abwasserrohr am Wasser. Die Leitungen laufen entlang der Strassen.",
+  "adv.moreWater": "Das Wasser wird knapp. Baue eine weitere Pumpe oder einen Wasserturm.", "adv.sewage": "Die Kanäle sind voll. Baue ein weiteres Abwasserrohr oder eine Kläranlage.",
+  "adv.services": "Die Leute wollen jetzt eine Praxis und eine Schule. Und der Müll häuft sich: Baue eine Mülldeponie, weit weg von den Häusern.",
+  "adv.safety": "Eine Polizeiwache und eine Feuerwache halten die Stadt sicher. Ohne Feuerwache brennen Gebäude nieder.",
+  "adv.unhappy": "Die Leute sind unglücklich. Sieh in den Ansichten nach, was fehlt: Parks, Gesundheit, weniger Verschmutzung oder Lärm.",
+  "adv.jobs": "Viele Leute haben keine Arbeit. Zoniere mehr Läden, Industrie oder Büros.", "adv.workers": "Firmen finden keine Arbeitskräfte. Zoniere mehr Häuser.",
+  "adv.traffic": "Es herrscht Stau. Mache aus vollen Strassen Alleen, baue mehr Verbindungen oder starte eine Buslinie.",
+  "adv.money": "Die Stadt verliert Geld. Öffne Geld: Erhöhe die Steuern ein wenig, senke ein Budget oder zoniere mehr.",
+  "adv.noDemand": "Gerade will niemand einziehen. Prüfe die Balken oben und sorge dafür, dass es bei den Häusern Jobs und Läden gibt.",
+  "adv.highway": "Manche Strassen führen nicht zur Autobahn. Dort kann nichts wachsen.", "adv.transit": "Buslinien sind frei. Baue ein Busdepot und zeichne dann eine Linie durch belebte Gegenden.",
+  "adv.edu": "Mit einem Gymnasium können die Leute in Büros arbeiten. Büros zahlen gute Steuern und sind sauber.",
+  "adv.farms": "Bauernhöfe und Forstwirtschaft sind frei. Suche in den Ansichten nach fruchtbarem Boden und Wald. Lokale Rohstoffe lassen Fabriken mehr verdienen.",
+  "adv.flood": "Vorsicht mit tiefem Land am Wasser: Bei Sturm wird es überflutet. Die Ansicht Hochwassergefahr zeigt, wo.",
+  "adv.chill": "Chill-Modus: Das Geld geht nie aus und alles ist frei. Baue, was du willst!",
+  "adv.fine": "Der Stadt geht es gut. Wachse weiter!", "adv.hide": "Ausblenden", "adv.gotIt": "Verstanden",
+
+  // ---- Hilfe
+  "help.camera": "Herumbewegen",
+  "help.camera.mouse": "Ziehe mit der linken Maustaste zum Bewegen, mit der rechten zum Drehen und Neigen, und zoome mit dem Rad. Oder mit den Tasten W A S D, Q E, R F, + und -.",
+  "help.camera.touch": "Ziehe mit einem Finger zum Bewegen (bei Ansehen) oder jederzeit mit zwei Fingern. Zwei Finger zusammen oder auseinander zum Zoomen, verdrehen zum Drehen.",
+  "help.roads": "Strassen", "help.roads.t": "Alles steht an Strassen, und Strassen müssen zur Autobahn führen. Zeichne gerade Strassen oder Kurven; Strassen über Wasser werden zu Brücken. Strom, Wasser und Abwasser laufen von selbst entlang der Strassen.",
+  "help.zones": "Zonen", "help.zones.t": "Male Zonen entlang der Strassen: Wohnen, Läden, Industrie, später Büros. Gebäude wachsen, wenn die Stadt sie will (die Balken oben), und werden besser, wenn die Gegend schön ist.",
+  "help.services": "Dienste", "help.services.t": "Schulen, Praxen, Polizei, Feuerwachen und Parks erreichen die Grundstücke um sich herum. Die Ansichten zeigen, wie weit.",
+  "help.traffic": "Verkehr", "help.traffic.t": "Jedes Auto fährt von einem echten Zuhause zu einem echten Job oder Laden. Stau macht die Leute unglücklich und die Firmen ärmer. Alleen, mehr Verbindungen, Busse und die Metro helfen.",
+  "help.money": "Geld", "help.money.t": "Steuern kommen von Leuten und Firmen; Strassen und Dienste kosten Unterhalt. Wird es knapp: Erhöhe die Steuern ein wenig, senke Budgets oder nimm einen Kredit.",
+  "help.modes": "Modi", "help.keys": "Tasten", "help.keys.t": "Leertaste: Pause · 1 2 3: Tempo · Esc: Abbrechen · B: Abreissen",
+};
