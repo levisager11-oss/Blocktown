@@ -33,7 +33,7 @@ function shapeGeometry(shape: Shape): THREE.BufferGeometry {
   }
 }
 
-const GREY = [0.2, 0.2, 0.21], SCAFFOLD = [0.5, 0.4, 0.24];
+const GREY = [0.2, 0.2, 0.21], SCAFFOLD = [0.5, 0.4, 0.24], WHITE = [0.9, 0.91, 0.95];
 const linear = new Map<number, number[]>();
 const tmpColor = new THREE.Color();
 function rgb(hex: number): number[] {
@@ -148,6 +148,12 @@ export class LotsMesh {
     let p = this.cache.get(key);
     if (!p) {
       p = blueprint(lot.kind, lot.level, lot.variant, lot.w, lot.d);
+      // Houses and small shops get windows on their biggest wall block, so they light up at night too.
+      if (lot.kind === Zone.ResLow || lot.kind === Zone.ComLow) {
+        let best: Part | null = null;
+        for (const part of p) if (part.shape === "box" && part.sy >= 2.4 && part.sx >= 3 && part.sz >= 3 && (!best || part.sx * part.sy * part.sz > best.sx * best.sy * best.sz)) best = part;
+        if (best) p = p.map((part) => (part === best ? { ...part, shape: "win" as const } : part));
+      }
       if (this.cache.size > 6000) this.cache.clear();
       this.cache.set(key, p);
     }
@@ -184,6 +190,7 @@ export class LotsMesh {
   }
 
   private rebuild(city: City, showEmpty: boolean) {
+    const snow = city.weather.snowCover * 0.85;
     for (const pool of this.pools.values()) pool.n = 0;
     this.heights.clear();
     const slab: Part = { shape: "box", x: 0, y: -5, z: 0, sx: 1, sy: 5.14, sz: 1, color: 0 };
@@ -201,7 +208,7 @@ export class LotsMesh {
       slab.sx = lot.w - 0.3; slab.sz = lot.d - 0.3; slab.sy = 5.14;
       if (zoned) slab.color = lot.kind >= Zone.Farm ? FARM_SLAB[lot.kind - Zone.Farm] : SLAB[ZONES[lot.kind].group];
       else slab.color = PLACE_BY_KIND.get(lot.kind)?.cat === "parks" ? 0x7fb765 : 0xb3b1a9;
-      this.put(lot, cos, sin, slab, 1, null, 0, 1);
+      this.put(lot, cos, sin, slab, 1, snow > 0.05 ? WHITE : null, snow, 1);
       const f = lot.flags;
       const burnt = (f & LF.Burnt) !== 0, empty = (f & LF.Abandoned) !== 0;
       const grow = burnt ? 0.5 : Math.max(0.04, lot.built);
@@ -221,7 +228,7 @@ export class LotsMesh {
   update(city: City, night: number, showEmpty: boolean, dt: number) {
     this.night.value = night;
     this.wait -= dt;
-    const key = city.lots.version + ":" + city.look + ":" + showEmpty;
+    const key = city.lots.version + ":" + city.look + ":" + showEmpty + ":" + Math.round(city.weather.snowCover * 8);
     if (key !== this.key && this.wait <= 0) {
       this.key = key;
       this.wait = 0.2;

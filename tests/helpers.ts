@@ -108,13 +108,16 @@ export function addWater(city: City, from: { x: number; z: number }): boolean {
   if (!best) return false;
   const node = city.roads.nearestNode(from.x, from.z, 400);
   if (!node) return false;
-  // Stop on dry land just before the shore.
+  // Stop on dry land a little before the shore.
   let ex = node.x, ez = node.z;
   for (let t = 0; t <= 1; t += 0.01) {
     const x = node.x + (best.x - node.x) * t, z = node.z + (best.z - node.z) * t;
-    if (T.heightAt(x, z) < 1.6) break;
+    if (T.heightAt(x, z) < 2.4) break;
     ex = x; ez = z;
   }
   if (Math.hypot(ex - node.x, ez - node.z) > 12) road(city, node.x, node.z, ex, ez);
-  return placeNear(city, Kind.Pump, ex, ez) && placeNear(city, Kind.Outlet, ex, ez);
+  const has = (kind: Kind) => [...city.lots.lots.values()].some((l) => l.kind === kind);
+  const pump = has(Kind.Pump) || placeNear(city, Kind.Pump, ex, ez);
+  const outlet = has(Kind.Outlet) || placeNear(city, Kind.Outlet, ex, ez);
+  return pump && outlet;
 }

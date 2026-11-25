@@ -69,7 +69,7 @@ export class Cars {
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
     }
     // Lights on at night.
-    this.mat.emissive.setRGB(0.28 * night, 0.25 * night, 0.18 * night);
+    this.mat.emissive.setRGB(0.1 * night, 0.09 * night, 0.06 * night);
   }
 }
 

@@ -15,8 +15,8 @@
     "Three modes: Chill, Normal and Hard",
     "High-score lists and 27 achievements"
   ],
-  "cover_image": "cover.png",
-  "screenshots": ["shots/1.png", "shots/2.png", "shots/3.png"],
+  "cover_image": "cover.jpg",
+  "screenshots": ["shots/1.jpg", "shots/2.jpg", "shots/3.jpg"],
   "score_order": "high",
   "score_format": "points",
   "boards": [

@@ -44,7 +44,7 @@ export const milestoneName = (n: number) => t("ms." + n);
 export class UI {
   root: HTMLElement;
   panels: Panels;
-  private hud = { pop: h("b"), money: h("b"), net: h("small"), happy: h("b"), happyIcon: h("span"), traffic: h("b"), title: h("b"), rank: h("span"), clock: h("span"), sky: h("span") };
+  private hud = { pop: h("b"), money: h("b"), net: h("small"), happy: h("b"), happyIcon: h("span"), traffic: h("b"), title: h("b"), rank: h("span"), clock: h("span"), date: h("span", { class: "long" }), sky: h("span") };
   private bars: HTMLElement[] = [];
   private speedButtons: HTMLElement[] = [];
   private toolbar = h("div", { class: "toolbar" });
@@ -66,6 +66,7 @@ export class UI {
   private trayKey = "";
   private lastMilestone = -1;
   private cutOff = false;
+  private anyZoned = false;
 
   constructor(readonly game: GameApi) {
     this.root = document.getElementById("ui")!;
@@ -94,7 +95,7 @@ export class UI {
         chip("happy", this.hud.happyIcon, this.hud.happy, null, "hud.happy", () => this.panels.toggle("city")),
         chip("traffic", "🚗", this.hud.traffic, null, "hud.traffic", () => this.setView(game.view.infoView === "traffic" ? "" : "traffic")),
         demand),
-      h("div", { class: "clock" }, this.hud.sky, this.hud.clock),
+      h("div", { class: "clock" }, this.hud.sky, this.hud.date, this.hud.clock),
       speeds);
     this.pad.append(
       ...([["⟲", () => { game.view.goal.yaw += 0.5; }], ["⟳", () => { game.view.goal.yaw -= 0.5; }], ["⤒", () => { game.view.goal.pitch += 0.2; }], ["⤓", () => { game.view.goal.pitch -= 0.2; }],
@@ -290,8 +291,8 @@ export class UI {
 
   private advise(): string {
     const c = this.city, st = c.stats, n = c.count;
-    if (!(n.roads > 0)) return c.chill && !(n.zoned > 0) ? "adv.chill" : "adv.start";
-    if (!(n.zoned > 0)) return "adv.zoneHomes";
+    if (!(n.roads > 0)) return c.chill ? "adv.chill" : "adv.start";
+    if (!this.anyZoned && st.buildings === 0) return "adv.zoneHomes";
     if (this.cutOff) return "adv.highway";
     if (st.buildings > 0 && st.powerMake <= 0) return "adv.power";
     if (st.buildings > 0 && st.cCap + st.iCap === 0 && st.homes > 20) return "adv.zoneJobs";
@@ -324,6 +325,7 @@ export class UI {
       if (comp && c.roads.reachesOutside(comp)) on++; else off++;
     }
     this.cutOff = off > on;
+    this.anyZoned = on + off > 0;
   }
 
   private drawAdvisor() {
@@ -406,8 +408,9 @@ export class UI {
     const W = city.weather;
     setText(H.sky, (SKY_ICON[W.sky] ?? "") + SEASON_ICON[W.season]);
     const hour = Math.floor(city.hour);
-    setText(H.clock, `${t("ui.day", { n: (city.day % YEAR_DAYS) + 1 })} · ${t("ui.year", { n: Math.floor(city.day / YEAR_DAYS) + 1 })} · ${String(hour).padStart(2, "0")}:00`);
-    (H.sky.parentElement as HTMLElement).title = `${t("season." + SEASONS[W.season])} · ${t("sky." + W.sky)}`;
+    setText(H.date, `${t("ui.day", { n: (city.day % YEAR_DAYS) + 1 })} · ${t("ui.year", { n: Math.floor(city.day / YEAR_DAYS) + 1 })}`);
+    setText(H.clock, `${String(hour).padStart(2, "0")}:00`);
+    (H.sky.parentElement as HTMLElement).title = `${t("season." + SEASONS[W.season])} · ${t("sky." + W.sky)} · ${H.date.textContent}`;
     const speeds = [0, 1, 2, 4];
     this.speedButtons.forEach((b, i) => b.classList.toggle("on", speeds[i] === this.game.speed));
     this.pad.classList.toggle("hidden", !this.game.settings.pad);

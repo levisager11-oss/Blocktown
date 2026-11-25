@@ -521,6 +521,18 @@ function outlet(): Out {
   return o;
 }
 
+/** A buried tank: a low concrete lid with two hatches, a vent pipe and a small hut. */
+function septic(): Out {
+  const o: Out = [];
+  box(o, -1.5, 0, 0.5, 8, 0.7, 9, CONCRETE);
+  cyl(o, -3, 0.7, -1.5, 2.2, 0.35, 2.2, 0x5f6a72);
+  cyl(o, 0.2, 0.7, 2.5, 2.2, 0.35, 2.2, 0x5f6a72);
+  cyl(o, -4.6, 0.7, 3.8, 0.5, 3, 0.5, 0x8a949c);
+  box(o, 4.2, 0, -3.2, 3.2, 2.6, 3.6, 0xd9d2c0);
+  box(o, 4.2, 2.6, -3.2, 3.6, 0.3, 4, 0x7a5a48);
+  return o;
+}
+
 function treatment(): Out {
   const o: Out = [];
   box(o, 0, 0, -8.8, 26, 6, 7, 0xdfe3e6);
@@ -867,6 +879,7 @@ function build(kind: number, level: number, r: Rand): Out | null {
     case Kind.Pump: return pump();
     case Kind.Tower: return waterTower();
     case Kind.Outlet: return outlet();
+    case Kind.Septic: return septic();
     case Kind.Treatment: return treatment();
     case Kind.Landfill: return landfill(r);
     case Kind.Incinerator: return incinerator();

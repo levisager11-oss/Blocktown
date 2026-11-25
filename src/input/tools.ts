@@ -47,6 +47,7 @@ export class Tools {
   private dirty = true;
   private painted = 0;
   private selected: Lot | null = null;
+  private waiting: { x: number; y: number; z: number } | null = null;
 
   constructor(readonly host: ToolHost) {}
 
@@ -186,7 +187,12 @@ export class Tools {
     if (!g) return false;
     this.cursor = g;
     this.dirty = true;
-    if (tool.t === "zone") { this.painted = 0; this.paint(g); return true; }
+    if (tool.t === "zone") {
+      this.painted = 0;
+      // A finger may be the start of a two-finger move: wait until it drags or lifts before painting.
+      if (touch) this.waiting = g; else this.paint(g);
+      return true;
+    }
     if (tool.t === "road") {
       if (tool.mode === "upgrade") return false;
       if (!this.pts.length) {
@@ -207,8 +213,10 @@ export class Tools {
     this.cursor = g;
     this.dirty = true;
     if (!g) return;
-    if (this.tool.t === "zone") this.paint(g);
-    else this.track(g, x, y, touch);
+    if (this.tool.t === "zone") {
+      if (this.waiting) { this.paint(this.waiting); this.waiting = null; }
+      this.paint(g);
+    } else this.track(g, x, y, touch);
   }
 
   /** The press ended. `moved` says whether it was a drag rather than a tap. */
@@ -217,6 +225,7 @@ export class Tools {
     const g = this.ground(x, y);
     this.dirty = true;
     if (tool.t === "zone") {
+      if (this.waiting) { this.paint(this.waiting); this.waiting = null; }
       if (this.painted) this.host.sound("zone");
       return;
     }
@@ -363,6 +372,14 @@ export class Tools {
     this.stops = [];
     this.dirty = true;
     this.host.hintChanged();
+  }
+
+  /** A second finger came down: what the first one began was not meant for the tool. */
+  interrupted(startedPoint: boolean) {
+    this.waiting = null;
+    if (startedPoint && this.pts.length === 1) { this.pts = []; this.plan = null; this.host.hintChanged(); }
+    if (this.tool.t === "place" && !this.pending) this.spot = null;
+    this.dirty = true;
   }
 
   /** Right click or Escape: steps back. Returns false when there was nothing to undo. */

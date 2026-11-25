@@ -38,6 +38,7 @@ export class Controls {
     const touch = e.pointerType !== "mouse";
     if (this.fingers.length === 2) {
       // A second finger: whatever the first one was doing becomes moving the camera.
+      if (this.mode === "tool") this.tools.interrupted(this.startedPoint);
       this.mode = "pinch";
       this.moved = true;
       this.startPinch();

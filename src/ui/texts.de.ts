@@ -38,7 +38,7 @@ export const de: Record<string, string> = {
 
   // ---- Gebäude, die du selbst baust
   "b.wind": "Windrad", "b.coal": "Kohlekraftwerk", "b.solar": "Solarpark", "b.nuclear": "Atomkraftwerk",
-  "b.pump": "Wasserpumpe", "b.tower": "Wasserturm", "b.outlet": "Abwasserrohr", "b.treatment": "Kläranlage",
+  "b.pump": "Wasserpumpe", "b.tower": "Wasserturm", "b.outlet": "Abwasserrohr", "b.treatment": "Kläranlage", "b.septic": "Klärgrube",
   "b.landfill": "Mülldeponie", "b.recycling": "Recyclinghof", "b.incinerator": "Müllverbrennung",
   "b.police": "Polizeiwache", "b.policeHq": "Polizeizentrale", "b.fire": "Feuerwache", "b.fireHq": "Feuerwehrzentrale",
   "b.clinic": "Praxis", "b.hospital": "Spital", "b.school": "Primarschule", "b.highSchool": "Gymnasium", "b.university": "Universität",
@@ -47,7 +47,7 @@ export const de: Record<string, string> = {
   "bd.wind": "Saubere Energie. Mehr Strom bei Wind, steht bei Sturm still.", "bd.coal": "Viel billiger Strom und viel Rauch.",
   "bd.solar": "Saubere Energie. Weniger Strom bei Wolken und im Winter.", "bd.nuclear": "Riesige Menge sauberer Strom. Der Betrieb kostet viel.",
   "bd.pump": "Pumpt Wasser aus Fluss, See oder Meer. Muss am Wasser stehen.", "bd.tower": "Wasser überall, aber nicht viel.",
-  "bd.outlet": "Leitet Abwasser ins Wasser. Muss am Wasser stehen. Stinkt.", "bd.treatment": "Reinigt viel Abwasser ohne Gestank. Muss am Wasser stehen.",
+  "bd.outlet": "Leitet Abwasser ins Wasser. Muss am Wasser stehen. Stinkt.", "bd.septic": "Nimmt überall etwas Abwasser auf, auch weit weg vom Wasser. Riecht ein wenig.", "bd.treatment": "Reinigt viel Abwasser ohne Gestank. Kann überall stehen.",
   "bd.landfill": "Nimmt den Müll der Stadt auf. Daneben will niemand wohnen.", "bd.recycling": "Geht sauber mit Müll um.", "bd.incinerator": "Verbrennt viel Müll und macht daraus Strom.",
   "bd.police": "Sorgt in der Umgebung für Sicherheit.", "bd.policeHq": "Sorgt in einem grossen Teil der Stadt für Sicherheit.",
   "bd.fire": "Macht Brände in der Nähe selten und schickt Löschwagen.", "bd.fireHq": "Schützt einen grossen Teil der Stadt vor Feuer.",
@@ -161,8 +161,8 @@ export const de: Record<string, string> = {
   "adv.power": "Die Gebäude haben keinen Strom. Baue ein Windrad oder ein Kohlekraftwerk neben eine Strasse. Der Strom läuft entlang der Strassen.",
   "adv.morePower": "Der Strom reicht nicht für alle. Baue mehr Kraftwerke.",
   "adv.grow": "Es klappt! Baue weiter Strassen und Zonen. Achte auf die Balken oben: Sie zeigen, wovon die Stadt mehr will.",
-  "adv.water": "Deine Stadt braucht jetzt Wasser. Baue eine Wasserpumpe und ein Abwasserrohr am Wasser. Die Leitungen laufen entlang der Strassen.",
-  "adv.moreWater": "Das Wasser wird knapp. Baue eine weitere Pumpe oder einen Wasserturm.", "adv.sewage": "Die Kanäle sind voll. Baue ein weiteres Abwasserrohr oder eine Kläranlage.",
+  "adv.water": "Dein Ort braucht jetzt Wasser. Bau eine Wasserpumpe und ein Abwasserrohr am Wasser, oder einen Wasserturm und eine Klärgrube irgendwo. Die Leitungen laufen den Strassen entlang.",
+  "adv.moreWater": "Das Wasser wird knapp. Baue eine weitere Pumpe oder einen Wasserturm.", "adv.sewage": "Die Kanalisation ist voll. Bau noch ein Abwasserrohr, eine Klärgrube oder eine Kläranlage.",
   "adv.services": "Die Leute wollen jetzt eine Praxis und eine Schule. Und der Müll häuft sich: Baue eine Mülldeponie, weit weg von den Häusern.",
   "adv.safety": "Eine Polizeiwache und eine Feuerwache halten die Stadt sicher. Ohne Feuerwache brennen Gebäude nieder.",
   "adv.unhappy": "Die Leute sind unglücklich. Sieh in den Ansichten nach, was fehlt: Parks, Gesundheit, weniger Verschmutzung oder Lärm.",

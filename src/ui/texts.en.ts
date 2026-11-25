@@ -39,7 +39,7 @@ export const en: Record<string, string> = {
 
   // ---- buildings placed by hand
   "b.wind": "Wind turbine", "b.coal": "Coal power plant", "b.solar": "Solar park", "b.nuclear": "Nuclear power plant",
-  "b.pump": "Water pump", "b.tower": "Water tower", "b.outlet": "Sewage outlet", "b.treatment": "Sewage treatment plant",
+  "b.pump": "Water pump", "b.tower": "Water tower", "b.outlet": "Sewage outlet", "b.treatment": "Sewage treatment plant", "b.septic": "Septic tank",
   "b.landfill": "Landfill", "b.recycling": "Recycling centre", "b.incinerator": "Waste incinerator",
   "b.police": "Police station", "b.policeHq": "Police headquarters", "b.fire": "Fire station", "b.fireHq": "Fire headquarters",
   "b.clinic": "Clinic", "b.hospital": "Hospital", "b.school": "Primary school", "b.highSchool": "High school", "b.university": "University",
@@ -48,7 +48,7 @@ export const en: Record<string, string> = {
   "bd.wind": "Clean power. Makes more when it is windy, and stops in a storm.", "bd.coal": "A lot of cheap power, and a lot of smoke.",
   "bd.solar": "Clean power. Makes less under clouds and in winter.", "bd.nuclear": "A huge amount of clean power. Costs a lot to run.",
   "bd.pump": "Pumps water from a river, lake or the sea. Must stand near the water.", "bd.tower": "Water anywhere, but not much of it.",
-  "bd.outlet": "Lets sewage into the water. Must stand near the water. Smells.", "bd.treatment": "Cleans a lot of sewage without the smell. Must stand near the water.",
+  "bd.outlet": "Lets sewage into the water. Must stand near the water. Smells.", "bd.septic": "Takes a little sewage anywhere, far from the water. Smells a bit.", "bd.treatment": "Cleans a lot of sewage without the smell. Can stand anywhere.",
   "bd.landfill": "Takes the city's rubbish. Nobody wants to live next to it.", "bd.recycling": "Handles rubbish cleanly.", "bd.incinerator": "Burns a lot of rubbish and makes power from it.",
   "bd.police": "Keeps the area around it safe.", "bd.policeHq": "Keeps a large part of the city safe.",
   "bd.fire": "Makes fires rare nearby and sends engines to put them out.", "bd.fireHq": "Protects a large part of the city from fire.",
@@ -162,8 +162,8 @@ export const en: Record<string, string> = {
   "adv.power": "The buildings have no power. Build a wind turbine or a coal power plant next to a road. Power runs along the roads.",
   "adv.morePower": "There is not enough power for everyone. Build more power plants.",
   "adv.grow": "It works! Keep adding streets and zones. Watch the bars at the top: they show what the city wants more of.",
-  "adv.water": "Your town needs water now. Build a water pump and a sewage outlet near the water. Pipes run along the roads.",
-  "adv.moreWater": "Water is running short. Build another pump or water tower.", "adv.sewage": "The sewers are full. Build another sewage outlet or a treatment plant.",
+  "adv.water": "Your town needs water now. Build a water pump and a sewage outlet near the water, or a water tower and a septic tank anywhere. Pipes run along the roads.",
+  "adv.moreWater": "Water is running short. Build another pump or water tower.", "adv.sewage": "The sewers are full. Build another sewage outlet, septic tank or a treatment plant.",
   "adv.services": "People now ask for a clinic and a school. And rubbish piles up: build a landfill, away from the homes.",
   "adv.safety": "A police station and a fire station keep the town safe. Without a fire station, fires burn buildings down.",
   "adv.unhappy": "People are unhappy. Look at Views to see what is missing: parks, health, less pollution or noise.",

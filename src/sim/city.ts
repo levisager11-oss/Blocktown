@@ -27,7 +27,7 @@ export const TICK_HOURS = TICK * HOURS_PER_SECOND;
 export interface Stats {
   pop: number; homes: number; workers: number; jobs: number; filled: number; unemployment: number; happy: number;
   cJobs: number; iJobs: number; oJobs: number; sJobs: number; cCap: number; iCap: number; oCap: number;
-  buildings: number; problems: number;
+  buildings: number; problems: number; blocked: number;
   powerMake: number; powerNeed: number; waterMake: number; waterNeed: number; sewageCap: number; sewageNeed: number;
   garbageCap: number; garbageNeed: number; cleanPower: number;
   students: number[]; seats: number[]; beds: number;
@@ -39,7 +39,7 @@ export interface Stats {
 
 const blankStats = (): Stats => ({
   pop: 0, homes: 0, workers: 0, jobs: 0, filled: 0, unemployment: 0, happy: 0.7,
-  cJobs: 0, iJobs: 0, oJobs: 0, sJobs: 0, cCap: 0, iCap: 0, oCap: 0, buildings: 0, problems: 0,
+  cJobs: 0, iJobs: 0, oJobs: 0, sJobs: 0, cCap: 0, iCap: 0, oCap: 0, buildings: 0, problems: 0, blocked: 0,
   powerMake: 0, powerNeed: 0, waterMake: 0, waterNeed: 0, sewageCap: 0, sewageNeed: 0, garbageCap: 0, garbageNeed: 0, cleanPower: 1,
   students: [0, 0, 0], seats: [0, 0, 0], beds: 0,
   income: {}, expense: {}, net: 0, flow: 1, riders: 0, cars: 0,
@@ -402,7 +402,7 @@ export class City {
     else if (this.terrain.heightAt(p.x, p.z) < 0.9) out.reason = "water";
     else if (!this.roads.clearOf(box, 1)) out.reason = "tooClose";
     else if (clears.some((l) => l.custom)) out.reason = "building";
-    else if (def.shore && !this.terrain.nearWater(box.x, box.z, 55)) out.reason = "shore";
+    else if (def.shore && !this.terrain.nearWater(box.x, box.z, 95)) out.reason = "shore";
     else if (!this.canAfford(def.cost)) out.reason = "money";
     else { out.ok = true; out.reason = ""; }
     return out;

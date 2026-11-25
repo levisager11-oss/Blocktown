@@ -99,7 +99,7 @@ export function census(city: City) {
   const st = city.stats, maps = city.maps, lots = city.lots.lots;
   const waterOn = city.active("water");
   const J = [0, 0, 0, 0];
-  let pop = 0, homes = 0, buildings = 0, problems = 0, landSum = 0, landN = 0;
+  let pop = 0, homes = 0, buildings = 0, problems = 0, blocked = 0, landSum = 0, landN = 0;
   let cCap = 0, iCap = 0, oCap = 0, sJobs = 0;
   city.homes.length = city.works.length = city.shops.length = city.factories.length = city.raws.length = 0;
   let beds = 0, garbageCap = 0;
@@ -112,6 +112,7 @@ export function census(city: City) {
     if (isZoned(lot)) {
       const z = ZONES[lot.kind], cap = z.cap[lot.level - 1];
       const ok = runs(city, lot, waterOn);
+      if (!ok) blocked++;
       lot.value = maps.at("value", lot.x, lot.z);
       landSum += lot.value; landN++;
       if (z.group === "r") {
@@ -228,7 +229,7 @@ export function census(city: City) {
   st.pop = pop; st.homes = homes; st.workers = workers; st.jobs = jobs; st.filled = taken; st.unemployment = unemployment;
   st.happy = happyN > 0 ? happySum / happyN : 0.7;
   st.cJobs = cJobs; st.iJobs = iJobs; st.oJobs = oJobs; st.sJobs = sJobs; st.cCap = cCap; st.iCap = iCap; st.oCap = oCap;
-  st.buildings = buildings; st.problems = problems;
+  st.buildings = buildings; st.problems = problems; st.blocked = blocked;
   st.students = students; st.seats = seats; st.beds = beds; st.garbageCap = garbageCap; st.garbageNeed = garbageNeed;
   st.quality = quality; st.land = landN ? landSum / landN : 0.3;
   st.flow = city.traffic.flow; st.cars = city.traffic.agents.length;
@@ -398,7 +399,7 @@ export function grow(city: City) {
   if (!growList.length) return;
   const d = city.demand, st = city.stats;
   // Don't keep building while what stands there doesn't work (no power, say).
-  const stuck = st.buildings > 8 && st.problems > st.buildings * 0.3;
+  const stuck = st.buildings > 8 && st.blocked > st.buildings * 0.3;
   const tries = clamp(Math.ceil(growList.length * 0.04), 1, 14);
   for (let k = 0; k < tries; k++) {
     const lot = growList[Math.floor(Math.random() * growList.length)];

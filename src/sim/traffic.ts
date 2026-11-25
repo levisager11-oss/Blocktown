@@ -248,7 +248,8 @@ export class Traffic {
     const city = this.city, st = city.stats;
     if (!city.homes.length) return;
     const profile = dayProfile(city.hour);
-    const rate = st.pop * 0.0021 * profile;
+    // When the roads are jammed, more people stay home or walk.
+    const rate = st.pop * 0.0013 * profile * (0.45 + 0.55 * Math.min(1, this.flow * 1.25));
     const w = clamp((rate * this.avgTrip) / this.cap, 1, 7);
     this.carAcc += (rate * dt) / w;
     let guard = 0;
@@ -256,7 +257,7 @@ export class Traffic {
       this.carAcc -= 1;
       if (this.agents.length < this.cap * 1.15) this.trip(w);
     }
-    const freight = (st.iJobs + st.cJobs * 0.5) * 0.00045 * (0.4 + 0.6 * Math.min(1.3, profile));
+    const freight = (st.iJobs + st.cJobs * 0.5) * 0.0003 * (0.4 + 0.6 * Math.min(1.3, profile));
     const tw = clamp(w * 0.7, 1, 5);
     this.truckAcc += (freight * dt) / tw;
     guard = 0;
@@ -467,7 +468,7 @@ export class Traffic {
         // Into the next road, if the crossing is free and there is room.
         const node = this.city.roads.nodes.get(dir ? seg.a : seg.b)! as RNode & { busy?: number };
         const next = a.segs[a.i + 1], nd = a.dirs[a.i + 1], ndef = ROADS[next.type];
-        const forced = a.wait > 22 || a.kind === Veh.Fire;
+        const forced = a.wait > 12 || a.kind === Veh.Fire;
         const crossing = node.segs.length > 2;
         let lane = -1;
         if (!crossing || forced || (node.busy ?? 0) <= now) {
@@ -483,9 +484,9 @@ export class Traffic {
           a.v = 0;
           a.wait += dt;
           seg.flow[dir] = Math.max(0.06, seg.flow[dir] - dt * 0.03);
-          if (a.time > 300) { this.finish(a, 0.1); this.kill(a); continue; }
+          if (a.time > 160) { this.finish(a, 0.1); this.kill(a); continue; }
         } else {
-          if (crossing) node.busy = now + (def.lanes > 1 ? 0.3 : 0.48) * Math.sqrt(a.w) * (def.speed > 20 ? 0.5 : 1);
+          if (crossing) node.busy = now + (def.lanes > 1 ? 0.17 : 0.3) * Math.sqrt(a.w) * (def.speed > 20 ? 0.5 : 1);
           const ideal = seg.len / v0;
           seg.flow[dir] += (clamp(ideal / Math.max(0.05, a.segTime), 0.05, 1) - seg.flow[dir]) * 0.3;
           seg.load[dir] = Math.max(0, seg.load[dir] - a.w);

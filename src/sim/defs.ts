@@ -68,7 +68,7 @@ export const SERVICE_JOB_MIX = [0.2, 0.4, 0.3, 0.1];
 export const enum Kind {
   // Zoned buildings use their zone number (1 to 10) as their kind.
   Wind = 20, Coal = 21, Solar = 22, Nuclear = 24,
-  Pump = 30, Tower = 31, Outlet = 32, Treatment = 33,
+  Pump = 30, Tower = 31, Outlet = 32, Treatment = 33, Septic = 34,
   Landfill = 35, Incinerator = 36, Recycling = 37,
   Police = 40, PoliceHQ = 41, Fire = 42, FireHQ = 43,
   Clinic = 45, Hospital = 46,
@@ -100,7 +100,8 @@ export const PLACE: PlaceDef[] = [
   { kind: Kind.Pump, key: "pump", cat: "water", w: 14, d: 14, cost: 2400, upkeep: 45, jobs: 2, power: 12, makesWater: 520, unlock: 1, shore: true, icon: "🚰" },
   { kind: Kind.Tower, key: "tower", cat: "water", w: 14, d: 14, cost: 3400, upkeep: 60, jobs: 1, power: 6, makesWater: 220, unlock: 1, icon: "🗼" },
   { kind: Kind.Outlet, key: "outlet", cat: "water", w: 14, d: 14, cost: 2200, upkeep: 40, jobs: 1, power: 8, sewage: 560, unlock: 1, shore: true, pollution: 0.7, pollutionRadius: 90, icon: "🕳️" },
-  { kind: Kind.Treatment, key: "treatment", cat: "water", w: 32, d: 26, cost: 14500, upkeep: 170, jobs: 10, power: 40, sewage: 1900, unlock: 5, shore: true, icon: "♻️" },
+  { kind: Kind.Septic, key: "septic", cat: "water", w: 14, d: 14, cost: 2800, upkeep: 60, jobs: 1, sewage: 260, unlock: 1, pollution: 0.45, pollutionRadius: 70, icon: "🪠" },
+  { kind: Kind.Treatment, key: "treatment", cat: "water", w: 32, d: 26, cost: 14500, upkeep: 170, jobs: 10, power: 40, sewage: 1900, unlock: 5, icon: "♻️" },
 
   { kind: Kind.Landfill, key: "landfill", cat: "garbage", w: 36, d: 30, cost: 4200, upkeep: 75, jobs: 6, garbage: 28, unlock: 2, pollution: 0.8, pollutionRadius: 130, noise: 0.3, icon: "🗑️" },
   { kind: Kind.Recycling, key: "recycling", cat: "garbage", w: 28, d: 24, cost: 9200, upkeep: 130, jobs: 12, power: 20, garbage: 44, unlock: 5, noise: 0.3, icon: "♻️" },
