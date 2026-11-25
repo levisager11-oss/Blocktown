@@ -71,7 +71,7 @@ export const en: Record<string, string> = {
   "hint.roadEnd": "{len} m", "hint.upgrade": "Tap a road to change it to this type.", "hint.upgradeCost": "Change this road",
   "hint.zone": "Paint along roads. Buildings grow by themselves.", "hint.dezone": "Paint over zones to remove them.",
   "hint.place": "Pick a spot next to a road.", "hint.placeShore": "Pick a spot next to a road, near the water.", "hint.confirmPlace": "Build it here?",
-  "hint.bulldoze": "Tap a road or a building to remove it.", "hint.bus": "Tap roads to place stops ({n} so far). The bus drives them in order, round and round.",
+  "hint.confirmBulldoze": "Remove this?", "hint.bulldoze": "Tap a road or a building to remove it.", "hint.bus": "Tap roads to place stops ({n} so far). The bus drives them in order, round and round.",
   "hint.metro": "Tap metro stations in order ({n} so far).",
 
   // ---- why something can't be done

@@ -273,8 +273,17 @@ export class Tools {
     }
     if (tool.t === "bulldoze") {
       if (moved) return;
+      const before = this.target;
       this.track(g, x, y, touch);
+      // With a finger there is no hovering first: the first tap picks, the second (or the button) removes.
+      if (touch && this.target && !(this.pending && before && before.lot === this.target.lot && before.seg === this.target.seg)) {
+        this.pending = true;
+        this.host.hintChanged();
+        return;
+      }
+      this.pending = false;
       this.bulldoze();
+      this.host.hintChanged();
       return;
     }
     if (tool.t === "line") {
@@ -386,6 +395,7 @@ export class Tools {
   cancel(): boolean {
     this.dirty = true;
     if (this.pts.length || this.pending || this.stops.length) {
+      this.target = null;
       this.pts = [];
       this.plan = null;
       this.pending = false;
@@ -425,7 +435,10 @@ export class Tools {
       if (this.pending && this.spot?.ok) return { key: "hint.confirmPlace", cost: def.cost, buttons: [{ label: "ui.build", primary: true, act: () => this.buildPlace() }, cancel] };
       return { key: def.shore ? "hint.placeShore" : "hint.place", cost: def.cost, buttons: [] };
     }
-    if (tool.t === "bulldoze") return { key: "hint.bulldoze", buttons: [] };
+    if (tool.t === "bulldoze") {
+      if (this.pending && this.target) return { key: "hint.confirmBulldoze", bad: true, buttons: [{ label: "ui.demolish", primary: true, act: () => { this.pending = false; this.bulldoze(); this.dirty = true; this.host.hintChanged(); } }, cancel] };
+      return { key: "hint.bulldoze", buttons: [] };
+    }
     if (tool.t === "line") {
       const n = this.stops.length;
       const buttons: HintButton[] = [];

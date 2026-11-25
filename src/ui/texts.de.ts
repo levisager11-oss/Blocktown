@@ -70,7 +70,7 @@ export const de: Record<string, string> = {
   "hint.roadEnd": "{len} m", "hint.upgrade": "Tippe auf eine Strasse, um sie in diesen Typ zu ändern.", "hint.upgradeCost": "Diese Strasse ändern",
   "hint.zone": "Male entlang der Strassen. Gebäude wachsen von selbst.", "hint.dezone": "Male über Zonen, um sie zu entfernen.",
   "hint.place": "Wähle einen Platz neben einer Strasse.", "hint.placeShore": "Wähle einen Platz neben einer Strasse, nahe am Wasser.", "hint.confirmPlace": "Hier bauen?",
-  "hint.bulldoze": "Tippe auf eine Strasse oder ein Gebäude, um es abzureissen.", "hint.bus": "Tippe auf Strassen, um Haltestellen zu setzen (bisher {n}). Der Bus fährt sie der Reihe nach ab, immer im Kreis.",
+  "hint.confirmBulldoze": "Das hier abreissen?", "hint.bulldoze": "Tippe auf eine Strasse oder ein Gebäude, um es abzureissen.", "hint.bus": "Tippe auf Strassen, um Haltestellen zu setzen (bisher {n}). Der Bus fährt sie der Reihe nach ab, immer im Kreis.",
   "hint.metro": "Tippe die Metro-Stationen der Reihe nach an (bisher {n}).",
 
   // ---- warum etwas nicht geht
