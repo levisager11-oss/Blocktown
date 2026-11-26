@@ -170,8 +170,9 @@ svg { display: block; }
 
 /* ---------- side panel ---------- */
 .panel {
-  position: absolute; top: calc(var(--hud-h) + var(--gap) * 2 + var(--safe-t)); right: calc(var(--gap) + var(--safe-r)); bottom: calc(var(--dock-h) + var(--gap));
-  width: 340px; min-height: 200px; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; z-index: 5; animation: slide 0.2s ease-out;
+  position: absolute; top: calc(var(--hud-h) + var(--gap) * 2 + var(--safe-t)); right: calc(var(--gap) + var(--safe-r));
+  max-height: calc(100% - var(--hud-h) - var(--dock-h) - var(--gap) * 3 - var(--safe-t));
+  width: 340px; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; z-index: 5; animation: slide 0.2s ease-out;
   background: rgba(18, 25, 38, 0.96);
 }
 /* opened from the menu: a box in the middle, over a dimmed menu */
@@ -339,7 +340,7 @@ select option { background: var(--surface-solid); }
   .road-ico { transform: scale(0.85); margin: 0; } .zone-ico { width: 30px; height: 24px; font-size: 14px; }
   .tip { padding: 5px 6px 5px 12px; } .tip .hint { font-size: 13px; min-height: 26px; } .tray-desc { font-size: 11.5px; }
   .advisor { max-width: 270px; } .adv-box { padding: 8px 30px 8px 8px; } .adv-box p { font-size: 12.5px; } .adv-box .face { width: 30px; height: 30px; font-size: 19px; }
-  .panel { bottom: calc(var(--gap) + var(--safe-b)); }
+  .panel { max-height: calc(100% - var(--hud-h) - var(--gap) * 3 - var(--safe-t) - var(--safe-b)); }
   .pad { gap: 4px; } .pad button { width: 38px; height: 34px; font-size: 15px; }
   #ui.has-pad .bottom > * { max-width: min(calc(100% - 180px), 900px); }
   .menu { align-items: center; }
