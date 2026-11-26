@@ -1,5 +1,5 @@
 // The road network: crossings ("nodes") joined by straight or curved roads ("segments").
-import { BRIDGE_COST, BRIDGE_HEIGHT, ROADS, Road } from "./defs";
+import { BRIDGE_COST, BRIDGE_HEIGHT, ROADS, Road, TUNNEL_COST, TUNNEL_DEPTH } from "./defs";
 import { bezLength, bezPart, bezX, Box, crossing, distToBox, distToPiece } from "./geom";
 import type { Terrain } from "./terrain";
 import { Grid, clamp, smoothstep } from "./util";
@@ -18,8 +18,10 @@ export interface RSeg {
   load: Float32Array;
   /** Vehicles counted over time, for noise and the traffic view. */
   vol: number;
-  /** The last vehicle that drove in, per direction and lane. */
-  tail: any[];
+  /** The vehicles on it, per direction and lane (index dir * 4 + lane; lane 3 is the tram track), front first. */
+  q: any[][];
+  /** Runs at an even slope from end to end: under hills (a tunnel) and over valleys. */
+  tunnel: boolean;
 }
 
 /** Where a new road starts or ends: free land, an existing crossing, or a spot on an existing road. */
@@ -32,6 +34,9 @@ export interface RoadPlan {
   cost: number; len: number; type: Road;
   px: number[]; pz: number[]; py: number[];
   curve: number[]; stops: Stop[];
+  tunnel: boolean;
+  /** Which points lie deep underground (only in a tunnel). */
+  deep: boolean[];
 }
 export interface Hit { seg: RSeg; d: number; s: number; t: number; x: number; z: number }
 
@@ -63,12 +68,12 @@ export class RoadNet {
     return node;
   }
 
-  addSeg(a: number, b: number, cx: number, cz: number, type: Road, fixed = false, id?: number): RSeg {
+  addSeg(a: number, b: number, cx: number, cz: number, type: Road, fixed = false, id?: number, tunnel = false): RSeg {
     const seg: RSeg = {
       id: id ?? this.nextSeg, a, b, cx, cz, type, fixed, len: 0, n: 0,
       px: new Float32Array(0), pz: new Float32Array(0), py: new Float32Array(0), cum: new Float32Array(0),
       bridgeLen: 0, x0: 0, z0: 0, x1: 0, z1: 0,
-      flow: new Float32Array([1, 1]), load: new Float32Array(2), vol: 0, tail: [],
+      flow: new Float32Array([1, 1]), load: new Float32Array(2), vol: 0, q: [[], [], [], [], [], [], [], []], tunnel,
     };
     this.nextSeg = Math.max(this.nextSeg, seg.id) + 1;
     this.segs.set(seg.id, seg);
@@ -100,7 +105,7 @@ export class RoadNet {
       if (i > 0) {
         const d = Math.hypot(x - seg.px[i - 1], z - seg.pz[i - 1]);
         seg.cum[i] = seg.cum[i - 1] + d;
-        if (this.terrain.heightAt(x, z) < 0.3) bridge += d;
+        if (this.terrain.heightAt(x, z) < 0.3 && !seg.tunnel) bridge += d;
       }
       if (x < x0) x0 = x;
       if (x > x1) x1 = x;
@@ -108,6 +113,11 @@ export class RoadNet {
       if (z > z1) z1 = z;
     }
     seg.len = seg.cum[n];
+    if (seg.tunnel) {
+      // An even slope from one end to the other.
+      for (let i = 0; i <= n; i++) seg.py[i] = A.y + (B.y - A.y) * (seg.cum[i] / (seg.len || 1));
+      for (let i = 1; i <= n; i++) if (seg.py[i] > this.terrain.heightAt(seg.px[i], seg.pz[i]) + 1.5) bridge += seg.cum[i] - seg.cum[i - 1];
+    }
     seg.bridgeLen = bridge;
     const hw = ROADS[seg.type].width / 2 + 2;
     seg.x0 = x0 - hw; seg.z0 = z0 - hw; seg.x1 = x1 + hw; seg.z1 = z1 + hw;
@@ -128,6 +138,24 @@ export class RoadNet {
     return true;
   }
 
+  /** Is point i of a segment deep under the ground (inside a tunnel)? */
+  deepAt(seg: RSeg, i: number): boolean {
+    return seg.tunnel && this.terrain.heightAt(seg.px[i], seg.pz[i]) - seg.py[i] > TUNNEL_DEPTH;
+  }
+
+  /** Turns a road round: a one-way road then runs the other way. */
+  reverse(seg: RSeg) {
+    this.grid.remove(seg, seg.x0, seg.z0, seg.x1, seg.z1);
+    const a = seg.a;
+    seg.a = seg.b;
+    seg.b = a;
+    this.shape(seg);
+    for (const q of seg.q) q.length = 0;
+    seg.flow[0] = seg.flow[1] = 1;
+    this.grid.add(seg, seg.x0, seg.z0, seg.x1, seg.z1);
+    this.version++;
+  }
+
   setType(seg: RSeg, type: Road) {
     this.grid.remove(seg, seg.x0, seg.z0, seg.x1, seg.z1);
     seg.type = type;
@@ -143,6 +171,10 @@ export class RoadNet {
     const first = bezPart(A.x, A.z, seg.cx, seg.cz, B.x, B.z, 0, t);
     const second = bezPart(A.x, A.z, seg.cx, seg.cz, B.x, B.z, t, 1);
     const node = this.addNode(first[4], first[5]);
+    if (seg.tunnel) {
+      const k = Math.min(seg.n, Math.round(t * seg.n));
+      node.y = seg.py[k];
+    }
     // The first half keeps the segment's number.
     this.grid.remove(seg, seg.x0, seg.z0, seg.x1, seg.z1);
     B.segs = B.segs.filter((s) => s !== id);
@@ -152,7 +184,7 @@ export class RoadNet {
     node.segs.push(id);
     this.shape(seg);
     this.grid.add(seg, seg.x0, seg.z0, seg.x1, seg.z1);
-    const rest = this.addSeg(node.id, B.id, second[2], second[3], seg.type, seg.fixed);
+    const rest = this.addSeg(node.id, B.id, second[2], second[3], seg.type, seg.fixed, undefined, seg.tunnel);
     return { node, rest };
   }
 
@@ -176,12 +208,14 @@ export class RoadNet {
     return out;
   }
 
+  /** The road nearest to a point. Tunnels are only found near their ends, where they come out of the ground. */
   nearestSeg(x: number, z: number, maxD: number, skip?: (s: RSeg) => boolean): Hit | null {
     let best: Hit | null = null;
     for (const seg of this.grid.query(x - maxD, z - maxD, x + maxD, z + maxD)) {
       if (skip && skip(seg)) continue;
       if (x < seg.x0 - maxD || x > seg.x1 + maxD || z < seg.z0 - maxD || z > seg.z1 + maxD) continue;
       for (let i = 0; i < seg.n; i++) {
+        if (seg.tunnel && this.deepAt(seg, i) && this.deepAt(seg, i + 1)) continue;
         const r = distToPiece(x, z, seg.px[i], seg.pz[i], seg.px[i + 1], seg.pz[i + 1]);
         if (r.d <= maxD && (!best || r.d < best.d)) {
           best = {
@@ -212,6 +246,7 @@ export class RoadNet {
     for (const seg of this.grid.query(box.x - r, box.z - r, box.x + r, box.z + r)) {
       const lim = ROADS[seg.type].width / 2 + margin;
       for (let i = 0; i < seg.n; i++) {
+        if (seg.tunnel && this.deepAt(seg, i) && this.deepAt(seg, i + 1)) continue;
         const ax = seg.px[i], az = seg.pz[i], bx = seg.px[i + 1], bz = seg.pz[i + 1];
         if (distToBox(ax, az, box) < lim || distToBox((ax + bx) / 2, (az + bz) / 2, box) < lim) return false;
       }
@@ -259,28 +294,48 @@ export class RoadNet {
 
   // ------------------------------------------------------------------ planning a new road
 
-  plan(a: Anchor, b: Anchor, ctrl: { x: number; z: number } | null, type: Road): RoadPlan {
+  plan(a: Anchor, b: Anchor, ctrl: { x: number; z: number } | null, type: Road, tunnel = false): RoadPlan {
     const def = ROADS[type], hw = def.width / 2;
     const cx = ctrl ? ctrl.x : (a.x + b.x) / 2, cz = ctrl ? ctrl.z : (a.z + b.z) / 2;
     const curve = [a.x, a.z, cx, cz, b.x, b.z];
     const len = bezLength(a.x, a.z, cx, cz, b.x, b.z);
-    const plan: RoadPlan = { ok: false, reason: "", cost: 0, len, type, px: [], pz: [], py: [], curve, stops: [] };
+    const plan: RoadPlan = { ok: false, reason: "", cost: 0, len, type, px: [], pz: [], py: [], curve, stops: [], tunnel, deep: [] };
     const N = clamp(Math.ceil(len / 3), 4, 320);
     const T = this.terrain;
-    let bridge = 0, outside = false;
+    let outside = false;
     for (let i = 0; i <= N; i++) {
       const t = i / N, x = bezX(a.x, cx, b.x, t), z = bezX(a.z, cz, b.z, t);
       plan.px.push(x);
       plan.pz.push(z);
       plan.py.push(this.deckAt(x, z));
       if (!T.inside(x, z, 3)) outside = true;
-      if (i > 0 && T.inside(x, z) && T.heightAt(x, z) < 0.3) bridge += Math.hypot(x - plan.px[i - 1], z - plan.pz[i - 1]);
     }
-    plan.cost = Math.round((len - bridge) * def.cost + bridge * def.cost * BRIDGE_COST);
+    if (tunnel) {
+      // An even slope between the two ends, under hills and over valleys.
+      const cum = [0];
+      for (let i = 1; i <= N; i++) cum.push(cum[i - 1] + Math.hypot(plan.px[i] - plan.px[i - 1], plan.pz[i] - plan.pz[i - 1]));
+      const ya = plan.py[0], yb = plan.py[N], L = cum[N] || 1;
+      for (let i = 0; i <= N; i++) plan.py[i] = ya + (yb - ya) * (cum[i] / L);
+    }
+    let cost = 0, under = 0;
+    for (let i = 0; i <= N; i++) {
+      const g = T.inside(plan.px[i], plan.pz[i]) ? T.heightAt(plan.px[i], plan.pz[i]) : 0;
+      plan.deep.push(tunnel && g - plan.py[i] > TUNNEL_DEPTH);
+      if (i === 0) continue;
+      const d = Math.hypot(plan.px[i] - plan.px[i - 1], plan.pz[i] - plan.pz[i - 1]);
+      const below = tunnel && g - plan.py[i] > 0.8, lifted = (!tunnel && g < 0.3) || (tunnel && plan.py[i] > g + 1.5);
+      if (below) under += d;
+      cost += d * def.cost * (below ? TUNNEL_COST : lifted ? BRIDGE_COST : 1);
+    }
+    plan.cost = Math.round(cost);
     const fail = (reason: string) => { plan.reason = reason; return plan; };
     if (len < 7) return fail("short");
     if (outside) return fail("outside");
     if (a.node !== undefined && a.node === b.node) return fail("short");
+    if (tunnel && under < 12) return fail("noTunnel");
+    const deep = plan.deep;
+    /** Is piece j of an existing road deep under the ground? Then it passes under, it doesn't meet. */
+    const segDeep = (seg: RSeg, j: number) => seg.tunnel && (this.deepAt(seg, j) || this.deepAt(seg, Math.min(seg.n, j + 1)));
 
     // Where the new road crosses roads that are already there.
     const { px, pz } = plan;
@@ -295,7 +350,9 @@ export class RoadNet {
       if (seg.x1 < x0 || seg.x0 > x1 || seg.z1 < z0 || seg.z0 > z1) continue;
       const shw = ROADS[seg.type].width / 2;
       for (let i = 0; i < N; i++) {
+        if (deep[i] || deep[i + 1]) continue;
         for (let j = 0; j < seg.n; j++) {
+          if (segDeep(seg, j)) continue;
           const c = crossing(px[i], pz[i], px[i + 1], pz[i + 1], seg.px[j], seg.pz[j], seg.px[j + 1], seg.pz[j + 1]);
           if (!c) continue;
           const x = px[i] + (px[i + 1] - px[i]) * c.t, z = pz[i] + (pz[i + 1] - pz[i]) * c.t;
@@ -325,6 +382,7 @@ export class RoadNet {
         if (node.x < x0 - 6 || node.x > x1 + 6 || node.z < z0 - 6 || node.z > z1 + 6) continue;
         let bd = 5.5, bt = -1;
         for (let i = 0; i < N; i++) {
+          if (deep[i] || deep[i + 1]) continue;
           const r = distToPiece(node.x, node.z, px[i], pz[i], px[i + 1], pz[i + 1]);
           if (r.d < bd) { bd = r.d; bt = (i + r.f) / N; }
         }
@@ -355,9 +413,10 @@ export class RoadNet {
       let mine: Stop[] | null = null;
       for (let i = 0; i <= N; i++) {
         const x = px[i], z = pz[i];
+        if (deep[i]) continue;
         if (x < seg.x0 - lim || x > seg.x1 + lim || z < seg.z0 - lim || z > seg.z1 + lim) continue;
         let close = false;
-        for (let j = 0; j < seg.n && !close; j++) close = distToPiece(x, z, seg.px[j], seg.pz[j], seg.px[j + 1], seg.pz[j + 1]).d < lim;
+        for (let j = 0; j < seg.n && !close; j++) close = !segDeep(seg, j) && distToPiece(x, z, seg.px[j], seg.pz[j], seg.px[j + 1], seg.pz[j + 1]).d < lim;
         if (!close) continue;
         mine = mine ?? stopOn(seg);
         if (!mine.some((s) => Math.hypot(s.x - x, s.z - z) < free)) return fail("tooClose");
@@ -440,17 +499,78 @@ export class RoadNet {
       if (p.node === q.node) continue;
       // Long stretches get crossings in between, so plots and traffic have something to hold on to.
       const partLen = plan.len * (q.t - p.t);
-      const parts = Math.max(1, Math.ceil(partLen / 190));
+      // Tunnels stay in one piece: a crossing in the middle would come up out of the ground.
+      const parts = plan.tunnel ? 1 : Math.max(1, Math.ceil(partLen / 190));
       let from = p.node!;
       for (let k = 0; k < parts; k++) {
         const t0 = p.t + ((q.t - p.t) * k) / parts, t1 = p.t + ((q.t - p.t) * (k + 1)) / parts;
         const part = bezPart(c[0], c[1], c[2], c[3], c[4], c[5], t0, t1);
         const to = k === parts - 1 ? q.node! : this.addNode(part[4], part[5]).id;
-        made.push(this.addSeg(from, to, part[2], part[3], plan.type, fixed));
+        made.push(this.addSeg(from, to, part[2], part[3], plan.type, fixed, undefined, plan.tunnel));
         from = to;
       }
     }
     return { made, cut };
+  }
+
+  // ------------------------------------------------------------------ roundabouts
+
+  /** Turns a crossing into a roundabout: the roads stop at a ring that traffic drives round one way. */
+  roundabout(nodeId: number, r: number): { made: RSeg[]; cut: RSeg[]; len: number } | string {
+    const N = this.nodes.get(nodeId);
+    if (!N || N.outside) return "fixed";
+    if (N.segs.length < 3) return "ringSpokes";
+    if (N.segs.length > 6) return "ringSpokes";
+    const segs = N.segs.map((id) => this.segs.get(id)!);
+    if (segs.some((s) => s.fixed)) return "fixed";
+    if (segs.some((s) => s.type === Road.Ring || s.tunnel)) return "ringSpokes";
+    if (segs.some((s) => s.len < r + 12)) return "short";
+    // Where each road meets the ring, and in which direction it leaves the crossing.
+    const cuts: { seg: RSeg; t: number; ang: number; fromA: boolean }[] = [];
+    for (const seg of segs) {
+      const fromA = seg.a === N.id;
+      const want = fromA ? r : seg.len - r;
+      let i = 0;
+      while (i < seg.n && seg.cum[i + 1] < want) i++;
+      const f = (want - seg.cum[i]) / ((seg.cum[i + 1] - seg.cum[i]) || 1);
+      const t = (i + f) / seg.n;
+      const x = seg.px[i] + (seg.px[i + 1] - seg.px[i]) * f, z = seg.pz[i] + (seg.pz[i + 1] - seg.pz[i]) * f;
+      cuts.push({ seg, t, ang: Math.atan2(z - N.z, x - N.x), fromA });
+    }
+    cuts.sort((p, q) => q.ang - p.ang);
+    for (let k = 0; k < cuts.length; k++) {
+      const gap = (cuts[k].ang - cuts[(k + 1) % cuts.length].ang + Math.PI * 4) % (Math.PI * 2);
+      if (gap < 0.45) return "angle";
+    }
+    const cx = N.x, cz = N.z;
+    const cut: RSeg[] = [];
+    const ring: { node: RNode; ang: number }[] = [];
+    for (const c of cuts) {
+      const { node, rest } = this.splitSeg(c.seg.id, c.t);
+      // Take away the piece between the old crossing and the ring.
+      if (c.fromA) { this.removeSeg(c.seg.id); cut.push(rest); }
+      else { this.removeSeg(rest.id); cut.push(c.seg); }
+      ring.push({ node, ang: Math.atan2(node.z - cz, node.x - cx) });
+    }
+    const made: RSeg[] = [];
+    let len = 0;
+    const third = (Math.PI * 2) / 3;
+    for (let k = 0; k < ring.length; k++) {
+      const p = ring[k], q = ring[(k + 1) % ring.length];
+      const sweep = ((p.ang - q.ang) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) || Math.PI * 2;
+      const pieces = Math.ceil(sweep / third - 1e-6);
+      let from = p.node;
+      for (let m = 1; m <= pieces; m++) {
+        const a0 = p.ang - (sweep * (m - 1)) / pieces, a1 = p.ang - (sweep * m) / pieces, mid = (a0 + a1) / 2, half = (a0 - a1) / 2;
+        const to = m === pieces ? q.node : this.addNode(cx + Math.cos(a1) * r, cz + Math.sin(a1) * r);
+        const k2 = r / Math.cos(half);
+        const seg = this.addSeg(from.id, to.id, cx + Math.cos(mid) * k2, cz + Math.sin(mid) * k2, Road.Ring);
+        made.push(seg);
+        len += seg.len;
+        from = to;
+      }
+    }
+    return { made, cut, len };
   }
 
   /** Total length of all roads of one kind. */

@@ -1,12 +1,14 @@
 // Saving and loading a city. Toki keeps a game's whole storage (at most 1 MB), so a city is packed small:
 // the land is rebuilt from its seed, and roads and plots are stored as tightly packed numbers.
-import { Cat, MapSize, Mode, Road } from "./defs";
+import { Cat, MapSize, Mode, ROADS, Road } from "./defs";
 import { City } from "./city";
 import { census, utilities } from "./economy";
 import { LF } from "./lots";
 import type { Sky } from "./weather";
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
+/** Saves from these versions can be loaded. Version 1 is Blocktown 1.0. */
+const READS = [1, 2];
 const Q = 8; // positions are kept to an eighth of a unit
 
 function toBase64(bytes: Uint8Array): string {
@@ -32,8 +34,10 @@ export interface SaveData {
   count: Record<string, number>; best: Record<string, number>;
   history: { pop: number[]; money: number[]; happy: number[] };
   weather: { sky: Sky; cloud: number; rain: number; wind: number; fog: number; snow: number; left: number; heat: number; cold: number };
-  lines: { metro: boolean; vehicles: number; color: number; riders: number; stops: number[] }[];
+  lines: { metro: boolean; tram?: boolean; vehicles: number; color: number; riders: number; stops: number[] }[];
   flow: number; nodes: string; segs: string; lots: string;
+  /** Since version 2: the middles of roundabouts (x, z, radius, ...). */
+  rings?: number[];
 }
 
 const round = (v: number, p = 100) => Math.round(v * p) / p;
@@ -56,7 +60,7 @@ export function serialize(city: City): string {
     sv.setUint16(i * 9 + 2, nodeIndex.get(s.b)!);
     sv.setUint16(i * 9 + 4, u16(s.cx * Q));
     sv.setUint16(i * 9 + 6, u16(s.cz * Q));
-    sb[i * 9 + 8] = s.type | (s.fixed ? 8 : 0);
+    sb[i * 9 + 8] = s.type | (s.fixed ? 8 : 0) | (s.tunnel ? 16 : 0);
   });
   // Only plots that carry something: a zone or a building. Empty ones are laid out again when loading.
   const lots = [...city.lots.lots.values()].filter((l) => l.zone || l.kind);
@@ -87,22 +91,23 @@ export function serialize(city: City): string {
     milestone: city.milestone, reached: city.reached.map((h) => Math.round(h)), disastersOn: city.disastersOn, over: city.over,
     count: Object.fromEntries(Object.entries(city.count).map(([k, v]) => [k, round(v)])), best: city.best, history: city.history,
     weather: { sky: W.sky, cloud: round(W.cloud), rain: round(W.rain), wind: round(W.wind), fog: round(W.fog), snow: round(W.snowCover), left: round(W.left), heat: round(W.heat), cold: round(W.cold) },
-    lines: city.transit.lines.map((l) => ({ metro: l.metro, vehicles: l.vehicles, color: l.color, riders: Math.round(l.riders), stops: l.stops.flatMap((s) => [round(s.x, 10), round(s.z, 10)]) })),
+    lines: city.transit.lines.map((l) => ({ metro: l.metro, tram: l.tram || undefined, vehicles: l.vehicles, color: l.color, riders: Math.round(l.riders), stops: l.stops.flatMap((s) => [round(s.x, 10), round(s.z, 10)]) })),
     flow: round(city.traffic.flow), nodes: toBase64(nb), segs: toBase64(sb), lots: toBase64(lb),
+    rings: city.rings.flatMap((g) => [round(g.x, 10), round(g.z, 10), g.r]),
   };
   return JSON.stringify(data);
 }
 
 export function deserialize(text: string): City {
   const d = JSON.parse(text) as SaveData;
-  if (!d || d.v !== SAVE_VERSION) throw new Error("unknown save");
+  if (!d || !READS.includes(d.v)) throw new Error("unknown save");
   const city = new City({ name: d.name, seed: d.seed, size: d.size, mode: d.mode }, true);
   const nb = fromBase64(d.nodes), nv = new DataView(nb.buffer);
   for (let i = 0; i * 5 < nb.length; i++) city.roads.addNode(nv.getUint16(i * 5) / Q, nv.getUint16(i * 5 + 2) / Q, nb[i * 5 + 4] === 1, i + 1);
   const sb = fromBase64(d.segs), sv = new DataView(sb.buffer);
   for (let i = 0; i * 9 < sb.length; i++) {
     const o = i * 9;
-    city.roads.addSeg(sv.getUint16(o) + 1, sv.getUint16(o + 2) + 1, sv.getUint16(o + 4) / Q, sv.getUint16(o + 6) / Q, (sb[o + 8] & 7) as Road, (sb[o + 8] & 8) !== 0);
+    city.roads.addSeg(sv.getUint16(o) + 1, sv.getUint16(o + 2) + 1, sv.getUint16(o + 4) / Q, sv.getUint16(o + 6) / Q, (sb[o + 8] & 7) as Road, (sb[o + 8] & 8) !== 0, undefined, (sb[o + 8] & 16) !== 0);
   }
   const lb = fromBase64(d.lots), lv = new DataView(lb.buffer), LB = 13;
   for (let i = 0; i * LB < lb.length; i++) {
@@ -146,13 +151,17 @@ export function deserialize(text: string): City {
         const lot = city.lots.at(x, z);
         if (lot) stops.push({ x, z, seg: lot.seg, s: lot.s, lot: lot.id });
       } else {
-        const hit = city.roads.nearestSeg(x, z, 6);
+        const hit = city.roads.nearestSeg(x, z, 6, l.tram ? (s) => !ROADS[s.type].tram : undefined);
         if (hit) stops.push({ x, z, seg: hit.seg.id, s: hit.s });
       }
     }
     if (stops.length < 2) continue;
-    city.transit.lines.push({ id: city.transit.lines.length + 1, metro: l.metro, stops, vehicles: l.vehicles, color: l.color, riders: l.riders, today: 0, dead: false });
+    const line = { id: city.transit.lines.length + 1, metro: l.metro, stops, vehicles: l.vehicles, color: l.color, riders: l.riders, today: 0, dead: false } as (typeof city.transit.lines)[number];
+    if (l.tram) line.tram = true;
+    city.transit.lines.push(line);
   }
+  const rings = d.rings ?? [];
+  for (let i = 0; i + 2 < rings.length; i += 3) city.rings.push({ x: rings[i], z: rings[i + 1], r: rings[i + 2] });
   (city.transit as unknown as { next: number }).next = city.transit.lines.length + 1;
   city.transit.version++;
   city.traffic.flow = d.flow ?? 1;
