@@ -32,6 +32,7 @@ export class Panels {
     this.arg = arg;
     this.scroll = 0;
     this.el.classList.toggle("hidden", !name);
+    this.ui.root.classList.toggle("has-panel", !!name);
     this.draw();
   }
   close() {
@@ -81,7 +82,9 @@ export class Panels {
   private slider(label: string, min: number, max: number, step: number, value: number, show: (v: number) => string, set: (v: number) => void): HTMLElement {
     const out = h("b", null, show(value));
     const input = h("input", { type: "range", min, max, step, value, "aria-label": label });
-    input.addEventListener("input", () => { const v = Number(input.value); out.textContent = show(v); set(v); });
+    const fillTo = (v: number) => input.style.setProperty("--p", ((v - min) / (max - min)) * 100 + "%");
+    fillTo(value);
+    input.addEventListener("input", () => { const v = Number(input.value); out.textContent = show(v); fillTo(v); set(v); });
     return h("label", { class: "slider" }, h("div", { class: "row" }, h("span", null, label), out), input);
   }
   private section(title: string, ...children: (HTMLElement | null | false)[]): HTMLElement {

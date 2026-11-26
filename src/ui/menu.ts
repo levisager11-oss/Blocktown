@@ -39,8 +39,9 @@ export class Menu {
   hide() { this.el.classList.add("hidden"); }
   redraw() { if (this.open) this.draw(); }
 
-  private button(label: string, act: () => void, cls = ""): HTMLElement {
-    return h("button", { class: "menu-btn-big " + cls, onclick: () => { this.host.click(); act(); } }, label);
+  private button(label: string, act: () => void, cls = "", icon = ""): HTMLElement {
+    return h("button", { class: "menu-btn-big " + cls, onclick: () => { this.host.click(); act(); } },
+      icon ? h("span", { class: "mi", "aria-hidden": "true" }, icon) : null, h("span", { class: "ml" }, label));
   }
 
   private draw() {
@@ -49,19 +50,19 @@ export class Menu {
     const host = this.host, slots = listSlots().sort((a, b) => b.savedAt - a.savedAt);
     const items: HTMLElement[] = [];
     if (host.playing) {
-      items.push(this.button(t("menu.resume"), () => host.resume(), "primary"));
-      items.push(this.button(t("menu.save"), () => host.save()));
+      items.push(this.button(t("menu.resume"), () => host.resume(), "primary hero", "▶"));
+      items.push(this.button(t("menu.save"), () => host.save(), "", "💾"));
     } else if (slots.length) {
-      items.push(this.button(`${t("menu.continue")}: ${slots[0].name}`, () => host.load(slots[0].slot), "primary"));
+      items.push(this.button(`${t("menu.continue")}: ${slots[0].name}`, () => host.load(slots[0].slot), "primary hero", "▶"));
     }
-    items.push(this.button(t("menu.new"), () => this.startDraft(), !host.playing && !slots.length ? "primary" : ""));
-    if (slots.length) items.push(this.button(t("menu.load"), () => this.show("load")));
-    items.push(this.button(t("menu.options"), () => host.openPanel("options")));
-    items.push(this.button(t("menu.help"), () => host.openPanel("help")));
-    if (document.fullscreenEnabled) items.push(this.button(t("menu.fullscreen"), () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen().catch(() => {}); }));
-    fill(this.el, h("div", { class: "menu-card" },
-      h("div", { class: "logo" }, h("span", { class: "blocks" }, h("i"), h("i"), h("i")), h("h1", null, t("game.name")), h("p", null, t("game.tagline"))),
-      ...items));
+    items.push(this.button(t("menu.new"), () => this.startDraft(), !host.playing && !slots.length ? "primary hero" : "", "✨"));
+    if (slots.length) items.push(this.button(t("menu.load"), () => this.show("load"), "", "🗂️"));
+    items.push(this.button(t("menu.options"), () => host.openPanel("options"), "", "⚙️"));
+    items.push(this.button(t("menu.help"), () => host.openPanel("help"), "", "📖"));
+    if (document.fullscreenEnabled) items.push(this.button(t("menu.fullscreen"), () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen().catch(() => {}); }, "", "🖥️"));
+    fill(this.el, h("div", { class: "menu-card main" },
+      h("div", { class: "logo" }, h("span", { class: "blocks" }, h("i"), h("i"), h("i")), h("div", null, h("h1", null, t("game.name")), h("p", null, t("game.tagline")))),
+      h("div", { class: "menu-list" }, ...items)));
   }
 
   private startDraft() {
@@ -79,16 +80,19 @@ export class Menu {
     seed.addEventListener("change", () => { d.seed = seedFromText(seed.value || "0"); host.preview(d.seed, d.size); });
     const pick = <T extends string>(options: T[], current: T, label: (o: T) => HTMLElement | string, set: (o: T) => void, cls: string) =>
       h("div", { class: "pick " + cls }, ...options.map((o) => h("button", { class: o === current ? "on" : "", onclick: () => { host.click(); set(o); this.draw(); } }, label(o))));
-    fill(this.el, h("div", { class: "menu-card wide" },
+    fill(this.el, h("div", { class: "menu-card wide new" },
       h("h2", null, t("new.title")),
-      h("label", { class: "field" }, h("span", null, t("new.name")), name),
-      h("div", { class: "field" }, h("span", null, t("new.mode")),
-        pick<Mode>(["chill", "normal", "hard"], d.mode, (m) => h("span", null, h("b", null, MODE_ICON[m] + " " + t("mode." + m)), h("small", null, t("mode." + m + ".d"))), (m) => { d.mode = m; }, "modes")),
-      h("div", { class: "field" }, h("span", null, t("new.size")),
-        pick<MapSize>(["small", "medium", "large"], d.size, (s) => t("size." + s), (s) => { d.size = s; host.preview(d.seed, d.size); }, "sizes")),
-      h("label", { class: "field" }, h("span", null, t("new.seed")),
-        h("div", { class: "seed" }, seed, h("button", { onclick: () => { host.click(); d.seed = Math.floor(Math.random() * 900000) + 100000; host.preview(d.seed, d.size); this.draw(); } }, "🎲 " + t("new.roll"))),
-        h("small", null, t("new.seedHint"))),
+      h("div", { class: "cols" },
+        h("div", { class: "col" },
+          h("label", { class: "field" }, h("span", null, t("new.name")), name),
+          h("div", { class: "field" }, h("span", null, t("new.size")),
+            pick<MapSize>(["small", "medium", "large"], d.size, (s) => t("size." + s), (s) => { d.size = s; host.preview(d.seed, d.size); }, "sizes")),
+          h("label", { class: "field" }, h("span", null, t("new.seed")),
+            h("div", { class: "seed" }, seed, h("button", { onclick: () => { host.click(); d.seed = Math.floor(Math.random() * 900000) + 100000; host.preview(d.seed, d.size); this.draw(); } }, "🎲 " + t("new.roll"))),
+            h("small", null, t("new.seedHint")))),
+        h("div", { class: "col" },
+          h("div", { class: "field" }, h("span", null, t("new.mode")),
+            pick<Mode>(["chill", "normal", "hard"], d.mode, (m) => h("span", null, h("b", null, MODE_ICON[m] + " " + t("mode." + m)), h("small", null, t("mode." + m + ".d"))), (m) => { d.mode = m; }, "modes")))),
       h("div", { class: "row" },
         this.button(t("new.start"), () => host.startNew({ name: d.name.trim() || NAMES[0], mode: d.mode, size: d.size, seed: d.seed }), "primary"),
         this.button(t("ui.back"), () => this.show("main")))));
