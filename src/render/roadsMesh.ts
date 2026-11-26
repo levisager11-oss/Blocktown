@@ -1,6 +1,6 @@
 // Draws the roads: asphalt with lane markings, pavements, crossings, bridges and street lights.
 import * as THREE from "three";
-import { ROADS } from "../sim/defs";
+import { ROADS, Road } from "../sim/defs";
 import type { City } from "../sim/city";
 import type { RSeg } from "../sim/roads";
 
@@ -19,9 +19,22 @@ function laneTexture(type: number): THREE.CanvasTexture {
   }
   const dash = (x: number, w: number, color: string) => { g.fillStyle = color; g.fillRect(x - w / 2, 0, w, 64); };
   const line = (x: number, w: number, color: string) => { g.fillStyle = color; g.fillRect(x - w / 2, 0, w, 128); };
-  if (type === 0) dash(64, 5, "#e8e8e0");
-  else if (type === 1) { line(61, 3, "#e6c84a"); line(67, 3, "#e6c84a"); dash(34, 4, "#e8e8e0"); dash(94, 4, "#e8e8e0"); line(5, 3, "#e8e8e0"); line(123, 3, "#e8e8e0"); }
-  else { line(64, 9, "#8d9096"); dash(36, 4, "#e8e8e0"); dash(92, 4, "#e8e8e0"); line(7, 3, "#e8e8e0"); line(121, 3, "#e8e8e0"); }
+  if (type === Road.Street) dash(64, 5, "#e8e8e0");
+  else if (type === Road.Avenue) { line(61, 3, "#e6c84a"); line(67, 3, "#e6c84a"); dash(34, 4, "#e8e8e0"); dash(94, 4, "#e8e8e0"); line(5, 3, "#e8e8e0"); line(123, 3, "#e8e8e0"); }
+  else if (type === Road.Highway) { line(64, 9, "#8d9096"); dash(36, 4, "#e8e8e0"); dash(92, 4, "#e8e8e0"); line(7, 3, "#e8e8e0"); line(121, 3, "#e8e8e0"); }
+  else if (type === Road.OneWay || type === Road.Ring) { dash(64, 4, "#e8e8e0"); line(6, 3, "#e8e8e0"); line(122, 3, "#e8e8e0"); }
+  else if (type === Road.OneWayAvenue) { dash(43, 4, "#e8e8e0"); dash(85, 4, "#e8e8e0"); line(5, 3, "#e8e8e0"); line(123, 3, "#e8e8e0"); }
+  else {
+    // A tram avenue: a bed of stones with two tracks in the middle.
+    g.fillStyle = "#8d8579";
+    g.fillRect(38, 0, 52, 128);
+    for (const x of [44, 56, 72, 84]) line(x, 3, "#5d6168");
+    for (let y = 4; y < 128; y += 16) { g.fillStyle = "#6e665b"; g.fillRect(40, y, 48, 4); }
+    for (const x of [44, 56, 72, 84]) line(x, 2, "#b8bcc2");
+    line(36, 3, "#e6c84a"); line(92, 3, "#e6c84a");
+    dash(18, 3, "#e8e8e0"); dash(110, 3, "#e8e8e0");
+    line(3, 3, "#e8e8e0"); line(125, 3, "#e8e8e0");
+  }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = THREE.ClampToEdgeWrapping;
   t.wrapT = THREE.RepeatWrapping;
@@ -71,9 +84,17 @@ export class RoadsMesh {
   private jamSegs: { seg: RSeg; start: number; count: number }[] = [];
   private jamVersion = -1;
   private jamWait = 0;
+  /** Arrows on one-way roads. */
+  private arrows: THREE.InstancedMesh;
+  /** Traffic lights: poles (fixed) and lamps (coloured every frame). */
+  private poles: THREE.InstancedMesh;
+  private lamps: THREE.InstancedMesh;
+  private lampAt: { node: number; seg: number }[] = [];
+  private color = new THREE.Color();
+  private dummy = new THREE.Object3D();
 
   constructor() {
-    this.mats = [0, 1, 2].map((t) => new THREE.MeshLambertMaterial({ map: laneTexture(t), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    this.mats = ROADS.map((_, t) => new THREE.MeshLambertMaterial({ map: laneTexture(t), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
     this.baseMat.polygonOffset = true;
     this.baseMat.polygonOffsetFactor = -1;
     this.baseMat.polygonOffsetUnits = -1;
@@ -87,6 +108,23 @@ export class RoadsMesh {
     g.fillStyle = grad;
     g.fillRect(0, 0, 32, 32);
     this.lampMat = new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), size: 9, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 });
+    // A flat white arrow pointing along +z.
+    const arrow = new THREE.BufferGeometry();
+    arrow.setAttribute("position", new THREE.Float32BufferAttribute([
+      -0.35, 0, -1.6, 0.35, 0, -1.6, 0.35, 0, 0.3, -0.35, 0, -1.6, 0.35, 0, 0.3, -0.35, 0, 0.3,
+      -1, 0, 0.3, 1, 0, 0.3, 0, 0, 1.7,
+    ], 3));
+    arrow.computeVertexNormals();
+    this.arrows = new THREE.InstancedMesh(arrow, new THREE.MeshBasicMaterial({ color: 0xeeeeea, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), 4096);
+    this.arrows.count = 0;
+    this.arrows.frustumCulled = false;
+    this.poles = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), new THREE.MeshLambertMaterial({ color: 0x3a3f47 }), 1024);
+    this.poles.count = 0;
+    this.poles.frustumCulled = false;
+    this.lamps = new THREE.InstancedMesh(new THREE.SphereGeometry(0.75, 8, 6), new THREE.MeshBasicMaterial(), 512);
+    this.lamps.count = 0;
+    this.lamps.frustumCulled = false;
+    this.group.add(this.arrows, this.poles, this.lamps);
   }
 
   private rebuild(city: City) {
@@ -96,7 +134,7 @@ export class RoadsMesh {
     }
     this.meshes = [];
     const T = city.terrain;
-    const tar = [new Builder(), new Builder(), new Builder()], base = new Builder();
+    const tar = ROADS.map(() => new Builder()), base = new Builder();
     const lamps: number[] = [];
     const ground = (x: number, z: number) => T.heightAt(x, z);
 
@@ -114,14 +152,24 @@ export class RoadsMesh {
         const nx = -tz, nz = tx;
         const x = seg.px[i], z = seg.pz[i], deck = seg.py[i], g0 = ground(x, z);
         const lifted = deck > g0 + 0.2;
+        const buried = seg.tunnel && deck < g0 - 1.2;
+        const wasBuried = i > 0 && seg.tunnel && seg.py[i - 1] < ground(seg.px[i - 1], seg.pz[i - 1]) - 1.2;
+        if (seg.tunnel && i > 0 && buried !== wasBuried) {
+          // The mouth of the tunnel: a concrete frame round the road.
+          const fx = buried ? seg.px[i - 1] : x, fz = buried ? seg.pz[i - 1] : z, fy = buried ? seg.py[i - 1] : deck;
+          for (const sd of [-1, 1]) base.box(fx + nx * (side + 0.6) * sd, fy - 0.5, fy + 6.2, fz + nz * (side + 0.6) * sd, 0.9, CONCRETE);
+          const v0 = base.vert(fx + nx * (side + 1.5), fy + 6.2, fz + nz * (side + 1.5), 0, 0, CONCRETE), v1 = base.vert(fx - nx * (side + 1.5), fy + 6.2, fz - nz * (side + 1.5), 0, 0, CONCRETE);
+          const v2 = base.vert(fx - nx * (side + 1.5), fy + 4.8, fz - nz * (side + 1.5), 0, 0, CONCRETE), v3 = base.vert(fx + nx * (side + 1.5), fy + 4.8, fz + nz * (side + 1.5), 0, 0, CONCRETE);
+          base.quad(v0, v1, v2, v3); base.quad(v3, v2, v1, v0);
+        }
         const curTar: number[] = [], curBase: number[] = [];
         for (let k = 0; k < 5; k++) {
           const vx = x + nx * across[k], vz = z + nz * across[k];
-          const y = lifted ? deck : Math.max(ground(vx, vz), g0 - 0.6);
+          const y = lifted || seg.tunnel ? deck : Math.max(ground(vx, vz), g0 - 0.6);
           curBase.push(base.vert(vx, y + 0.1, vz, 0, 0, def.zones ? PAVE : SHOULDER));
           if (k >= 1 && k <= 3) curTar.push(B.vert(vx, y + 0.19, vz, (k - 1) / 2, seg.cum[i] / 8));
         }
-        if (i > 0) {
+        if (i > 0 && !(buried && wasBuried)) {
           for (let k = 0; k < 4; k++) base.quad(prevBase[k], curBase[k], curBase[k + 1], prevBase[k + 1]);
           for (let k = 0; k < 2; k++) B.quad(prevTar[k], curTar[k], curTar[k + 1], prevTar[k + 1]);
           // Bridges get side walls and pillars.
@@ -138,7 +186,7 @@ export class RoadsMesh {
         }
         prevTar.length = 0; prevBase.length = 0;
         prevTar.push(...curTar); prevBase.push(...curBase);
-        if (seg.cum[i] >= lampAt) {
+        if (seg.cum[i] >= lampAt && !buried) {
           lampAt += 30;
           const s = (i >> 2) % 2 ? 1 : -1;
           lamps.push(x + nx * (hw + 0.6) * s, deck + 4.6, z + nz * (hw + 0.6) * s);
@@ -164,6 +212,76 @@ export class RoadsMesh {
         for (let k = 0; k < 16; k++) base.tri(c, ring[(k + 1) % 16], ring[k]);
       }
     }
+
+    // The green islands in the middle of roundabouts.
+    const GRASS = [0.42, 0.66, 0.32], CURB = [0.78, 0.78, 0.76];
+    for (const g of city.rings) {
+      const y = ground(g.x, g.z);
+      const inner = g.r - ROADS[Road.Ring].width / 2 - 0.4;
+      for (const [r, lift, color] of [[inner, 0.45, CURB], [inner - 0.7, 0.55, GRASS]] as [number, number, number[]][]) {
+        const c = base.vert(g.x, y + lift, g.z, 0, 0, color);
+        const ring: number[] = [];
+        for (let k = 0; k < 20; k++) { const a = (k / 20) * Math.PI * 2; ring.push(base.vert(g.x + Math.cos(a) * r, y + lift, g.z + Math.sin(a) * r, 0, 0, color)); }
+        for (let k = 0; k < 20; k++) base.tri(c, ring[(k + 1) % 20], ring[k]);
+      }
+      base.box(g.x, y, y + 4.5, g.z, 0.5, [0.45, 0.3, 0.2]);
+      base.box(g.x, y + 3, y + 6.5, g.z, 1.8, [0.3, 0.58, 0.3]);
+    }
+    // Arrows on one-way roads, every so often in every lane.
+    let na = 0;
+    const d = this.dummy, P = { x: 0, y: 0, z: 0, dx: 0, dz: 0 };
+    for (const seg of city.roads.segs.values()) {
+      const def = ROADS[seg.type];
+      if (!def.oneway || seg.type === Road.Ring) continue;
+      for (let s = 14; s < seg.len - 10 && na < 4090; s += 34) {
+        city.roads.pos(seg, s, P);
+        if (seg.tunnel && P.y < ground(P.x, P.z) - 1.2) continue;
+        for (let l = 0; l < def.lanes; l++) {
+          const off = -def.width / 2 + 1 + (l + 0.5) * ((def.width - 2) / def.lanes);
+          d.position.set(P.x - P.dz * off, P.y + 0.24, P.z + P.dx * off);
+          d.rotation.set(0, Math.atan2(P.dx, P.dz), 0);
+          d.scale.setScalar(def.lanes > 2 ? 0.8 : 1);
+          d.updateMatrix();
+          this.arrows.setMatrixAt(na++, d.matrix);
+        }
+      }
+    }
+    this.arrows.count = na;
+    this.arrows.instanceMatrix.needsUpdate = true;
+    // Traffic lights: a pole on the right of every road coming into a crossing that has them.
+    this.lampAt = [];
+    let np = 0;
+    const traffic = city.traffic;
+    (traffic as unknown as { prepare(): void }).prepare();
+    for (const [nodeId, ctl] of traffic.ctls) {
+      if (!ctl.lights) continue;
+      const node = city.roads.nodes.get(nodeId);
+      if (!node) continue;
+      for (const sid of node.segs) {
+        const seg = city.roads.segs.get(sid)!;
+        if (ROADS[seg.type].oneway && seg.a === nodeId) continue;
+        const def = ROADS[seg.type], hw = def.width / 2;
+        const atA = seg.a === nodeId;
+        city.roads.pos(seg, atA ? Math.min(seg.len, hw + 4) : Math.max(0, seg.len - hw - 4), P);
+        // Coming in towards the crossing; the right-hand side.
+        const dx = atA ? -P.dx : P.dx, dz = atA ? -P.dz : P.dz;
+        const x = P.x - dz * (hw + 1.2), z = P.z + dx * (hw + 1.2);
+        if (np < 1020) {
+          d.position.set(x, P.y, z); d.rotation.set(0, 0, 0); d.scale.set(0.35, 5.6, 0.35); d.updateMatrix();
+          this.poles.setMatrixAt(np++, d.matrix);
+          d.position.set(x, P.y + 5.1, z); d.scale.set(1.1, 2.4, 1.1); d.updateMatrix();
+          this.poles.setMatrixAt(np++, d.matrix);
+        }
+        if (this.lampAt.length < 510) this.lampAt.push({ node: nodeId, seg: sid });
+        const lamp = this.lampAt.length - 1;
+        d.position.set(x - dx * 0.6, P.y + 6.3, z - dz * 0.6); d.scale.setScalar(1); d.updateMatrix();
+        this.lamps.setMatrixAt(lamp, d.matrix);
+      }
+    }
+    this.poles.count = np;
+    this.poles.instanceMatrix.needsUpdate = true;
+    this.lamps.count = this.lampAt.length;
+    this.lamps.instanceMatrix.needsUpdate = true;
 
     tar.forEach((b, t) => {
       if (!b.idx.length) return;
@@ -216,6 +334,13 @@ export class RoadsMesh {
       this.rebuild(city);
     }
     this.lampMat.opacity = night * 0.95;
+    // The traffic lights change colour.
+    const L = [0xe8453c, 0x3ddc6a, 0xf5b83d];
+    for (let i = 0; i < this.lampAt.length; i++) {
+      const l = city.traffic.light(this.lampAt[i].node, this.lampAt[i].seg);
+      this.lamps.setColorAt(i, this.color.setHex(L[Math.max(0, l)]));
+    }
+    if (this.lamps.instanceColor) this.lamps.instanceColor.needsUpdate = true;
     if (showJam) {
       if (!this.jam || this.jamVersion !== city.roads.version) { this.jamVersion = city.roads.version; this.rebuildJam(city); this.jamWait = 0; }
       this.jam!.visible = true;

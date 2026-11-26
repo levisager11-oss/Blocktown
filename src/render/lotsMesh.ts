@@ -45,7 +45,7 @@ function rgb(hex: number): number[] {
 class Pool {
   mesh: THREE.InstancedMesh;
   n = 0;
-  constructor(readonly geo: THREE.BufferGeometry, readonly mat: THREE.Material, readonly group: THREE.Group, cap = 512) {
+  constructor(readonly geo: THREE.BufferGeometry, readonly mat: THREE.Material, readonly group: THREE.Group, cap = 64) {
     this.mesh = this.make(cap);
   }
   private make(cap: number): THREE.InstancedMesh {
@@ -53,8 +53,8 @@ class Pool {
     m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
     m.castShadow = true;
     m.receiveShadow = true;
-    m.frustumCulled = false;
     m.count = 0;
+    m.visible = false;
     this.group.add(m);
     return m;
   }
@@ -71,13 +71,27 @@ class Pool {
     }
     return this.n++;
   }
-  done() {
-    this.mesh.count = this.n;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    this.mesh.instanceColor!.needsUpdate = true;
+  done(sphere: THREE.Sphere) {
+    const m = this.mesh;
+    m.count = this.n;
+    m.visible = this.n > 0;
+    m.instanceMatrix.needsUpdate = true;
+    m.instanceColor!.needsUpdate = true;
+    // The whole piece of map is one ball for the camera to test, so pieces out of sight are skipped.
+    m.boundingSphere = sphere;
   }
 }
 
+/** One square piece of the map: its buildings are drawn together and redrawn only when one of them changes. */
+class Chunk {
+  group = new THREE.Group();
+  pools = new Map<Shape, Pool>();
+  lots = new Set<Lot>();
+  dirty = true;
+  sphere = new THREE.Sphere();
+  constructor(readonly cx: number, readonly cz: number) {}
+}
+const CHUNK = 224;
 const SLAB: Record<string, number> = { r: 0x86b96a, c: 0xb9b6ad, o: 0xb4b8bc, i: 0x9d968a };
 const FARM_SLAB = [0xa98f5c, 0x7d9a55, 0x8f8478, 0x8a7f72];
 
@@ -87,8 +101,16 @@ export class LotsMesh {
   night = { value: 0 };
   /** How high the building on each plot is, for clicking on it. */
   heights = new Map<number, number>();
-  private pools = new Map<Shape, Pool>();
-  private key = "";
+  /** Buildings that were just finished, with how long ago: they bounce once. */
+  pops = new Map<number, number>();
+  /** Called when a building is finished (for a puff of dust and a sound). */
+  onFinished: (lot: Lot) => void = () => {};
+  private geos = new Map<Shape, THREE.BufferGeometry>();
+  private mats = new Map<Shape, THREE.Material>();
+  private chunks = new Map<number, Chunk>();
+  private sig = new Map<number, number>();
+  private where = new Map<number, Chunk>();
+  private global = "";
   private wait = 0;
   private cache = new Map<string, Part[]>();
   private m4 = new THREE.Matrix4();
@@ -96,11 +118,29 @@ export class LotsMesh {
   private e = new THREE.Euler();
   private v1 = new THREE.Vector3();
   private v2 = new THREE.Vector3();
+  private snow = 0;
+  private showEmpty = false;
 
   constructor() {
     const plain = new THREE.MeshLambertMaterial({ flatShading: true });
     const round = new THREE.MeshLambertMaterial();
     const glass = new THREE.MeshLambertMaterial({ flatShading: true });
+    // Every block gets a little darker towards its foot, which makes the city look more solid.
+    const shade = (shader: { vertexShader: string; fragmentShader: string }) => {
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nvarying float vFoot;")
+        .replace("#include <begin_vertex>", `#include <begin_vertex>
+          #ifdef USE_INSTANCING
+          vFoot = position.y * length(instanceMatrix[1].xyz);
+          #else
+          vFoot = position.y;
+          #endif`);
+      shader.fragmentShader = shader.fragmentShader
+        .replace("#include <common>", "#include <common>\nvarying float vFoot;")
+        .replace("#include <color_fragment>", "#include <color_fragment>\n diffuseColor.rgb *= 0.8 + 0.2 * smoothstep(0.0, 3.5, vFoot);");
+    };
+    plain.onBeforeCompile = shade;
+    round.onBeforeCompile = shade;
     glass.onBeforeCompile = (shader) => {
       shader.uniforms.uNight = this.night;
       shader.vertexShader = shader.vertexShader
@@ -132,18 +172,20 @@ export class LotsMesh {
             float r = hash21(cell + vSeed * 91.0 + vObjN.xz * 7.0);
             vec3 glassColor = mix(vec3(0.16, 0.24, 0.34), vec3(0.34, 0.47, 0.6), r);
             diffuseColor.rgb = mix(diffuseColor.rgb, glassColor, m * 0.92);
+            diffuseColor.rgb *= 0.82 + 0.18 * smoothstep(0.0, 3.5, vLocal.y * vSize.y);
             wLit = m * step(0.42, r) * uNight;
           }`)
         .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
           totalEmissiveRadiance += vec3(1.0, 0.8, 0.46) * wLit;`);
     };
     for (const shape of SHAPES) {
-      const mat = shape === "win" ? glass : shape === "cyl" || shape === "dome" || shape === "tower" || shape === "cone" ? round : plain;
-      this.pools.set(shape, new Pool(shapeGeometry(shape), mat, this.group));
+      this.mats.set(shape, shape === "win" ? glass : shape === "cyl" || shape === "dome" || shape === "tower" || shape === "cone" ? round : plain);
+      this.geos.set(shape, shapeGeometry(shape));
     }
   }
 
-  private parts(lot: Lot): Part[] {
+  /** The parts of a building (also used for the pictures in the build menu). */
+  parts(lot: { kind: number; level: number; variant: number; w: number; d: number }): Part[] {
     const key = lot.kind + ":" + lot.level + ":" + lot.variant + ":" + lot.w + ":" + lot.d;
     let p = this.cache.get(key);
     if (!p) {
@@ -160,16 +202,29 @@ export class LotsMesh {
     return p;
   }
 
-  private put(lot: Lot, cos: number, sin: number, part: Part, grow: number, mix: number[] | null, mixAmount: number, dark: number) {
-    const pool = this.pools.get(part.shape)!;
+  private chunkOf(lot: Lot): Chunk {
+    const cx = Math.floor(lot.x / CHUNK), cz = Math.floor(lot.z / CHUNK), key = cx * 4096 + cz;
+    let c = this.chunks.get(key);
+    if (!c) {
+      c = new Chunk(cx, cz);
+      this.chunks.set(key, c);
+      this.group.add(c.group);
+    }
+    return c;
+  }
+
+  private put(chunk: Chunk, lot: Lot, cos: number, sin: number, part: Part, grow: number, wide: number, mix: number[] | null, mixAmount: number, dark: number) {
+    let pool = chunk.pools.get(part.shape);
+    if (!pool) { pool = new Pool(this.geos.get(part.shape)!, this.mats.get(part.shape)!, chunk.group); chunk.pools.set(part.shape, pool); }
     const i = pool.next();
     const arr = pool.mesh.instanceMatrix.array as Float32Array, o = i * 16;
-    const wx = lot.x + part.x * cos + part.z * sin, wz = lot.z - part.x * sin + part.z * cos, wy = lot.y + part.y * grow;
-    const sy = Math.max(0.01, part.sy * grow);
+    const px = part.x * wide, pz = part.z * wide;
+    const wx = lot.x + px * cos + pz * sin, wz = lot.z - px * sin + pz * cos, wy = lot.y + part.y * grow;
+    const sy = Math.max(0.01, part.sy * grow), sx = part.sx * wide, sz = part.sz * wide;
     if (part.rx || part.rz) {
       this.e.set(part.rx ?? 0, -lot.ang + (part.ry ?? 0), part.rz ?? 0, "YXZ");
       this.q.setFromEuler(this.e);
-      this.m4.compose(this.v1.set(wx, wy, wz), this.q, this.v2.set(part.sx, sy, part.sz));
+      this.m4.compose(this.v1.set(wx, wy, wz), this.q, this.v2.set(sx, sy, sz));
       arr.set(this.m4.elements, o);
     } else {
       let c = cos, s = sin;
@@ -178,9 +233,9 @@ export class LotsMesh {
         c = cos * cr - sin * sr;
         s = sin * cr + cos * sr;
       }
-      arr[o] = c * part.sx; arr[o + 1] = 0; arr[o + 2] = -s * part.sx; arr[o + 3] = 0;
+      arr[o] = c * sx; arr[o + 1] = 0; arr[o + 2] = -s * sx; arr[o + 3] = 0;
       arr[o + 4] = 0; arr[o + 5] = sy; arr[o + 6] = 0; arr[o + 7] = 0;
-      arr[o + 8] = s * part.sz; arr[o + 9] = 0; arr[o + 10] = c * part.sz; arr[o + 11] = 0;
+      arr[o + 8] = s * sz; arr[o + 9] = 0; arr[o + 10] = c * sz; arr[o + 11] = 0;
       arr[o + 12] = wx; arr[o + 13] = wy; arr[o + 14] = wz; arr[o + 15] = 1;
     }
     const col = pool.mesh.instanceColor!.array as Float32Array;
@@ -189,52 +244,142 @@ export class LotsMesh {
     col[i * 3] = r * dark; col[i * 3 + 1] = g * dark; col[i * 3 + 2] = b * dark;
   }
 
-  private rebuild(city: City, showEmpty: boolean) {
-    const snow = city.weather.snowCover * 0.85;
-    for (const pool of this.pools.values()) pool.n = 0;
-    this.heights.clear();
+  /** A number that changes whenever what stands on a plot looks different. */
+  private signature(lot: Lot): number {
+    const f = lot.flags & (LF.Abandoned | LF.Burnt);
+    const built = lot.kind ? Math.round(lot.built * 20) : 0;
+    return ((((lot.kind * 4 + lot.level) * 256 + lot.variant) * 16 + lot.zone) * 32 + built) * 4 + (f ? (f & LF.Burnt ? 2 : 1) : 0);
+  }
+
+  private rebuildChunk(chunk: Chunk) {
+    chunk.dirty = false;
+    for (const pool of chunk.pools.values()) pool.n = 0;
     const slab: Part = { shape: "box", x: 0, y: -5, z: 0, sx: 1, sy: 5.14, sz: 1, color: 0 };
-    for (const lot of city.lots.lots.values()) {
+    const snow = this.snow;
+    let top = 0;
+    for (const lot of chunk.lots) {
       // Rotation by -ang turns the plot's own space into the world.
       const cos = Math.cos(-lot.ang), sin = Math.sin(-lot.ang);
       if (!lot.kind) {
-        if (!lot.zone && !showEmpty) continue;
+        if (!lot.zone && !this.showEmpty) continue;
         slab.sx = lot.w - 1; slab.sz = lot.d - 1; slab.sy = 5.1;
         slab.color = lot.zone ? ZONES[lot.zone].color : 0xe9e9e4;
-        this.put(lot, cos, sin, slab, 1, null, 0, lot.zone ? 1 : 0.92);
+        this.put(chunk, lot, cos, sin, slab, 1, 1, null, 0, lot.zone ? 1 : 0.92);
         continue;
       }
       const zoned = isZoned(lot);
       slab.sx = lot.w - 0.3; slab.sz = lot.d - 0.3; slab.sy = 5.14;
       if (zoned) slab.color = lot.kind >= Zone.Farm ? FARM_SLAB[lot.kind - Zone.Farm] : SLAB[ZONES[lot.kind].group];
-      else slab.color = PLACE_BY_KIND.get(lot.kind)?.cat === "parks" ? 0x7fb765 : 0xb3b1a9;
-      this.put(lot, cos, sin, slab, 1, snow > 0.05 ? WHITE : null, snow, 1);
+      else {
+        const cat = PLACE_BY_KIND.get(lot.kind)?.cat;
+        slab.color = cat === "parks" ? 0x7fb765 : cat === "landmark" ? 0xc9c4b4 : 0xb3b1a9;
+      }
+      this.put(chunk, lot, cos, sin, slab, 1, 1, snow > 0.05 ? WHITE : null, snow, 1);
       const f = lot.flags;
       const burnt = (f & LF.Burnt) !== 0, empty = (f & LF.Abandoned) !== 0;
-      const grow = burnt ? 0.5 : Math.max(0.04, lot.built);
+      let grow = burnt ? 0.5 : Math.max(0.04, lot.built), wide = 1;
+      const pop = this.pops.get(lot.id);
+      if (pop !== undefined) {
+        // A little bounce: up past full height and back.
+        const k = Math.sin(Math.min(1, pop / 0.5) * Math.PI);
+        grow *= 1 + 0.16 * k;
+        wide = 1 - 0.05 * k;
+      }
       const mix = burnt ? GREY : empty ? GREY : lot.built < 1 ? SCAFFOLD : null;
       const amount = burnt ? 0.85 : empty ? 0.55 : (1 - lot.built) * 0.7;
       const dark = burnt ? 0.5 : empty ? 0.75 : 1;
-      let top = 0;
+      let height = 0;
       for (const part of this.parts(lot)) {
-        this.put(lot, cos, sin, part, grow, mix, amount, dark);
-        top = Math.max(top, (part.y + part.sy) * grow);
+        this.put(chunk, lot, cos, sin, part, grow, wide, mix, amount, dark);
+        height = Math.max(height, (part.y + part.sy) * grow);
       }
-      this.heights.set(lot.id, top);
+      this.heights.set(lot.id, height);
+      top = Math.max(top, lot.y + height);
     }
-    for (const pool of this.pools.values()) pool.done();
+    const half = CHUNK / 2;
+    chunk.sphere.center.set(chunk.cx * CHUNK + half, top / 2, chunk.cz * CHUNK + half);
+    chunk.sphere.radius = Math.hypot(half + 60, half + 60, top / 2 + 10);
+    for (const pool of chunk.pools.values()) pool.done(chunk.sphere);
   }
 
   update(city: City, night: number, showEmpty: boolean, dt: number) {
     this.night.value = night;
+    // Bouncing buildings are redrawn every frame until they settle.
+    for (const [id, t] of this.pops) {
+      const lot = city.lots.lots.get(id);
+      if (!lot || t > 0.5) { this.pops.delete(id); if (lot) this.where.get(id)!.dirty = true; continue; }
+      this.pops.set(id, t + dt);
+      const c = this.where.get(id);
+      if (c) c.dirty = true;
+    }
     this.wait -= dt;
-    const key = city.lots.version + ":" + city.look + ":" + showEmpty + ":" + Math.round(city.weather.snowCover * 8);
-    if (key !== this.key && this.wait <= 0) {
-      this.key = key;
-      this.wait = 0.2;
-      this.rebuild(city, showEmpty);
+    const snow = Math.round(city.weather.snowCover * 8) / 8 * 0.85;
+    const global = snow + ":" + showEmpty;
+    if (global !== this.global) {
+      this.global = global;
+      this.snow = snow;
+      this.showEmpty = showEmpty;
+      for (const c of this.chunks.values()) c.dirty = true;
+      this.wait = 0;
+    }
+    if (this.wait <= 0) {
+      this.wait = 0.15;
+      this.scan(city);
+    }
+    for (const c of this.chunks.values()) if (c.dirty) this.rebuildChunk(c);
+  }
+
+  /** Finds the plots that changed, and marks their pieces of map for redrawing. */
+  private scan(city: City) {
+    const seen = new Set<number>();
+    for (const lot of city.lots.lots.values()) {
+      seen.add(lot.id);
+      const sig = this.signature(lot);
+      const before = this.sig.get(lot.id);
+      if (before === sig) continue;
+      // Just finished: bounce and puff.
+      const was = before === undefined ? 0 : (before >> 2) & 31;
+      if (was > 0 && was < 20 && lot.kind && lot.built >= 1) {
+        this.pops.set(lot.id, 0);
+        this.onFinished(lot);
+      }
+      this.sig.set(lot.id, sig);
+      let c = this.where.get(lot.id);
+      if (!c) {
+        c = this.chunkOf(lot);
+        c.lots.add(lot);
+        this.where.set(lot.id, c);
+      } else if (!c.lots.has(lot)) {
+        // The same number, a different plot (after loading): start afresh.
+        c.lots.delete([...c.lots].find((l) => l.id === lot.id)!);
+        c.lots.add(lot);
+      }
+      c.dirty = true;
+    }
+    if (seen.size !== this.sig.size) {
+      for (const id of [...this.sig.keys()]) {
+        if (seen.has(id)) continue;
+        this.sig.delete(id);
+        this.heights.delete(id);
+        const c = this.where.get(id);
+        this.where.delete(id);
+        if (c) { for (const l of c.lots) if (l.id === id) { c.lots.delete(l); break; } c.dirty = true; }
+      }
     }
   }
 
-  refresh() { this.key = ""; this.wait = 0; }
+  /** A new city: forget everything. */
+  refresh() {
+    for (const c of this.chunks.values()) {
+      this.group.remove(c.group);
+      for (const p of c.pools.values()) p.mesh.dispose();
+    }
+    this.chunks.clear();
+    this.sig.clear();
+    this.where.clear();
+    this.heights.clear();
+    this.pops.clear();
+    this.global = "";
+    this.wait = 0;
+  }
 }
