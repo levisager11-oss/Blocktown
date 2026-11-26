@@ -289,7 +289,9 @@ export class LotsMesh {
       const amount = burnt ? 0.85 : empty ? 0.55 : (1 - lot.built) * 0.7;
       const dark = burnt ? 0.5 : empty ? 0.75 : 1;
       let height = 0;
+      const moving = lot.built >= 1 && !burnt && !empty;
       for (const part of this.parts(lot)) {
+        if (part.tag && moving) continue;
         this.put(chunk, lot, cos, sin, part, grow, wide, mix, amount, dark);
         height = Math.max(height, (part.y + part.sy) * grow);
       }

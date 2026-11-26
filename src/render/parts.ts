@@ -24,4 +24,6 @@ export interface Part {
   color: number;
   /** Turns, in radians: ry around the upright axis, then rx (tilt forward/back) and rz (tilt sideways). */
   ry?: number; rx?: number; rz?: number;
+  /** A moving part (the big wheel, a rocket): left out of the still city and drawn by the animations instead. */
+  tag?: "wheel" | "rocket";
 }

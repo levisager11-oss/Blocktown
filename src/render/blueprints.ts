@@ -919,6 +919,11 @@ function cityHall(r: Rand): Out {
 
 /** A big wheel standing in the x-y plane, its hub at height h. */
 function wheel(o: Out, x: number, z: number, h: number, R: number, turn = 0): void {
+  const first = o.length;
+  wheelParts(o, x, z, h, R, turn);
+  for (let i = first; i < o.length; i++) o[i].tag = "wheel";
+}
+export function wheelParts(o: Out, x: number, z: number, h: number, R: number, turn: number): void {
   const n = 16, seg = (2 * Math.PI * R) / n;
   const cabins = [0xe8553d, 0xf2b134, 0x3fa7d6, 0x59b36a, 0xd9569a, 0x9b6bd6];
   for (let i = 0; i < n; i++) {
@@ -1025,8 +1030,18 @@ function cathedral(): Out {
   return o;
 }
 
+/** A rocket standing at (x, y, z) with its two boosters. */
+export function rocket(o: Out, x: number, y: number, z: number): void {
+  cyl(o, x, y, z, 4.2, 40, 4.2, 0xf5f6f4);
+  cone(o, x, y + 40, z, 4.2, 7, 4.2, 0xd94f4f);
+  for (const dx of [-3.1, 3.1]) {
+    cyl(o, x + dx, y, z, 2, 20, 2, 0xe9ecef);
+    cone(o, x + dx, y + 20, z, 2, 3, 2, 0xe9ecef);
+  }
+}
+
 /** A plane standing on the ground, nose pointing along +x (or turned by ry). */
-function plane(o: Out, x: number, z: number, s: number, ry: number, c: number): void {
+export function plane(o: Out, x: number, z: number, s: number, ry: number, c: number): void {
   const t = { ry };
   const cx = Math.cos(ry), sz = -Math.sin(ry);
   cyl(o, x - cx * 8 * s, 1.2 * s, z - sz * 8 * s, 2.4 * s, 16 * s, 2.4 * s, c, { ry, rz: -Math.PI / 2 });
@@ -1108,12 +1123,9 @@ function space(r: Rand): Out {
   patch(o, 0, 0, 91, 69, 0xc9c3a8);
   // the launch pad with its rocket and tower
   cyl(o, -24, 0, -14, 22, 1.5, 22, 0x9aa0a6);
-  cyl(o, -24, 1.5, -14, 4.2, 40, 4.2, 0xf5f6f4);
-  cone(o, -24, 41.5, -14, 4.2, 7, 4.2, 0xd94f4f);
-  for (const dx of [-3.1, 3.1]) {
-    cyl(o, -24 + dx, 1.5, -14, 2, 20, 2, 0xe9ecef);
-    cone(o, -24 + dx, 21.5, -14, 2, 3, 2, 0xe9ecef);
-  }
+  const first = o.length;
+  rocket(o, -24, 1.5, -14);
+  for (let i = first; i < o.length; i++) o[i].tag = "rocket";
   box(o, -24, 30, -14, 0.6, 0.6, 1, 0x39424e);
   for (const [dx, dz] of [[-2.2, -9], [2.2, -9]] as [number, number][]) box(o, -24 + dx, 1.5, -14 + dz, 1.2, 46, 1.2, 0xd94f4f);
   box(o, -24, 1.5, -23, 5.6, 1, 1.2, 0xd94f4f);
