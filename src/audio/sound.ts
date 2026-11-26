@@ -3,7 +3,7 @@
 
 export type Sfx =
   | "click" | "open" | "close" | "road" | "zone" | "place" | "bulldoze" | "error"
-  | "cash" | "notify" | "warn" | "milestone" | "achievement" | "siren" | "thunder" | "grow";
+  | "cash" | "notify" | "warn" | "milestone" | "achievement" | "siren" | "thunder" | "grow" | "pop" | "whoosh" | "coins";
 
 export interface Ambience {
   /** 0 to 1 each. */
@@ -427,6 +427,21 @@ export class Sound {
         this.tone(out, t, 60, 35, 1.5, 0.3, "sine");
         break;
       }
+      case "pop":
+        this.tone(out, t, 380, 950, 0.07, 0.16, "sine");
+        this.tone(out, t + 0.04, 1400, 1700, 0.05, 0.05, "sine");
+        break;
+      case "whoosh":
+        this.noiseBurst(out, t, 0.2, "bandpass", 1500, 0.6, 0.16, false);
+        this.tone(out, t, 300, 700, 0.12, 0.05, "sine");
+        break;
+      case "coins":
+        for (let i = 0; i < 5; i++) {
+          const f = [E6, G5 * 2, C6 * 2, E6, C6 * 2][i];
+          this.tone(out, t + i * 0.07, f, f, 0.16, 0.08, "sine");
+          this.tone(out, t + i * 0.07, f * 2.01, f * 2.01, 0.08, 0.02, "sine");
+        }
+        break;
       case "grow":
         this.tone(out, t, 500, 900, 0.06, 0.12, "sine");
         this.tone(out, t + 0.03, 1200, 1200, 0.07, 0.05, "sine");

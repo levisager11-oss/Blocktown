@@ -37,6 +37,8 @@ export class View {
   private land: Land | null = null;
   private roads = new RoadsMesh();
   private lots = new LotsMesh();
+  /** Called when a building is finished. */
+  set onFinished(fn: (lot: Lot) => void) { this.lots.onFinished = fn; }
   private cars: Cars;
   private sky: Sky;
   private flames = new Flames();

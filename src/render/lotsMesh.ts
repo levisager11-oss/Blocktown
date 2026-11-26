@@ -21,7 +21,7 @@ function gableGeometry(): THREE.BufferGeometry {
   return g;
 }
 
-function shapeGeometry(shape: Shape): THREE.BufferGeometry {
+export function shapeGeometry(shape: Shape): THREE.BufferGeometry {
   switch (shape) {
     case "pyramid": return new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1).rotateY(Math.PI / 4).translate(0, 0.5, 0);
     case "gable": return gableGeometry();
