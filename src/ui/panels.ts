@@ -7,7 +7,8 @@ import type { RSeg } from "../sim/roads";
 import { clear, fill, h } from "./dom";
 import { Lang, money, num, pct, t } from "./i18n";
 import type { UI } from "./ui";
-import { ZONE_ICON, milestoneName } from "./ui";
+import { milestoneName } from "./ui";
+import { BUILDING_ICON, CAT_COLOR, ZONE_ICON, icon, tile } from "./icons";
 
 type PanelName = "" | "budget" | "city" | "transit" | "inspect" | "options" | "help";
 const hex = (c: number) => "#" + c.toString(16).padStart(6, "0");
@@ -53,7 +54,7 @@ export class Panels {
     if (!this.current) { clear(this.el); return; }
     const body = this.el.querySelector(".panel-body") as HTMLElement | null;
     if (body) this.scroll = body.scrollTop;
-    let title = "", content: (HTMLElement | null)[] = [];
+    let title = "", content: (HTMLElement | null)[] = [], ticon: HTMLElement | null = null;
     if (this.current === "budget") { title = t("panel.budget"); content = this.budget(); }
     else if (this.current === "city") { title = this.city.name; content = this.cityPanel(); }
     else if (this.current === "transit") { title = t("panel.transit"); content = this.transit(); }
@@ -62,10 +63,10 @@ export class Panels {
     else if (this.current === "inspect") {
       const r = this.inspect();
       if (!r) { this.close(); return; }
-      title = r.title; content = r.content;
+      title = r.title; content = r.content; ticon = r.icon ?? null;
     }
     const nb = h("div", { class: "panel-body" }, ...content);
-    fill(this.el, h("header", null, h("h2", null, title), h("button", { class: "x", title: t("ui.close"), onclick: () => this.close() }, "✕")), nb);
+    fill(this.el, h("header", null, ticon, h("h2", null, title), h("button", { class: "x", title: t("ui.close"), "aria-label": t("ui.close"), onclick: () => this.close() }, icon("x"))), nb);
     nb.scrollTop = this.scroll;
   }
 
@@ -101,7 +102,7 @@ export class Panels {
     const sum = (list: [string, number][]) => list.reduce((s, [, v]) => s + v, 0);
     out.push(this.section(t("budget.income"), ...inc.map(([k, v]) => this.row(t("inc." + k), money(v))), this.row("", money(sum(inc)), "total")));
     out.push(this.section(t("budget.expense"), ...exp.map(([k, v]) => this.row(t("exp." + k), money(v))), this.row("", money(sum(exp)), "total")));
-    out.push(h("div", { class: "row big " + (st.net >= 0 ? "plus" : "minus") }, h("span", null, t("budget.net")), h("b", null, (st.net >= 0 ? "+" : "") + money(st.net).replace("🪙 ", "🪙 "))));
+    out.push(h("div", { class: "row big " + (st.net >= 0 ? "plus" : "minus") }, h("span", null, t("budget.net")), h("b", null, (st.net >= 0 ? "+" : "") + money(st.net))));
     if (!city.unlocked(FEATURE_UNLOCK.budget)) { out.push(h("p", { class: "note" }, t("budget.locked"))); return out; }
     const taxes: ["r" | "c" | "i" | "o", string][] = [["r", "inc.r"], ["c", "inc.c"], ["i", "inc.i"]];
     if (city.unlocked(ZONES[Zone.Office].unlock)) taxes.push(["o", "inc.o"]);
@@ -206,8 +207,8 @@ export class Panels {
     const city = this.city, tr = city.transit, out: HTMLElement[] = [];
     const tools = this.game.tools;
     out.push(h("div", { class: "row buttons" },
-      h("button", { class: "primary", disabled: !city.unlocked(FEATURE_UNLOCK.transit), onclick: () => { tools.set({ t: "line", metro: false }); } }, "🚏 " + t("tool.busLine")),
-      h("button", { disabled: !city.unlocked(FEATURE_UNLOCK.metro), onclick: () => { tools.set({ t: "line", metro: true }); } }, "🚉 " + t("tool.metroLine"))));
+      h("button", { class: "primary", disabled: !city.unlocked(FEATURE_UNLOCK.transit), onclick: () => { tools.set({ t: "line", metro: false }); } }, icon("busFront"), t("tool.busLine")),
+      h("button", { disabled: !city.unlocked(FEATURE_UNLOCK.metro), onclick: () => { tools.set({ t: "line", metro: true }); } }, icon("train"), t("tool.metroLine"))));
     out.push(this.row(t("transit.buses", { used: tr.busesInUse(), all: tr.depots() * BUS.busesPerDepot }), ""));
     if (!tr.lines.length) { out.push(h("p", { class: "note" }, t("transit.none"))); return out; }
     out.push(this.row(t("transit.total", { n: num(city.stats.riders) }), ""));
@@ -230,7 +231,7 @@ export class Panels {
 
   // ------------------------------------------------------------------ one building or road
 
-  private inspect(): { title: string; content: HTMLElement[] } | null {
+  private inspect(): { title: string; icon?: HTMLElement; content: HTMLElement[] } | null {
     const city = this.city, a = this.arg;
     if (!a) return null;
     const out: HTMLElement[] = [];
@@ -245,7 +246,7 @@ export class Panels {
         const others = ROADS.map((r, type) => ({ r, type })).filter(({ r, type }) => type !== seg.type && city.unlocked(r.unlock));
         if (others.length) out.push(this.section(t("insp.change"), h("div", { class: "row buttons" }, ...others.map(({ r, type }) =>
           h("button", { onclick: () => { const why = city.upgradeRoad(seg, type); if (why) { this.ui.toast("why." + why, "bad"); this.game.sound("error"); } else this.game.sound("road"); this.draw(); } }, `${t("r." + r.key)} ${city.chill ? "" : money(city.upgradeCost(seg, type))}`)))));
-        out.push(h("button", { class: "danger", onclick: () => { if (city.bulldozeRoad(seg)) { this.game.sound("bulldoze"); this.close(); } } }, "🚜 " + t("ui.demolish")));
+        out.push(h("button", { class: "danger", onclick: () => { if (city.bulldozeRoad(seg)) { this.game.sound("bulldoze"); this.close(); } } }, icon("hammer"), t("ui.demolish")));
       }
       return { title: t("r." + def.key), content: out };
     }
@@ -256,15 +257,16 @@ export class Panels {
       if (!lot.zone) return null;
       const why = growBlock(city, lot);
       out.push(h("p", { class: "note" }, t(why ? "grow." + why : "grow.soon")));
-      return { title: `${ZONE_ICON[lot.zone]} ${t("z." + ZONES[lot.zone].key)}`, content: out };
+      return { title: t("z." + ZONES[lot.zone].key), icon: tile(ZONE_ICON[lot.zone], hex(ZONES[lot.zone].color), "zone"), content: out };
     }
     const problem = city.problem(lot);
     if (lot.built < 1) out.push(h("p", { class: "note" }, t("insp.construction")));
     if (problem) out.push(h("p", { class: "alert" }, t("prob." + problem)));
-    let title: string;
+    let title: string, ticon: HTMLElement;
     if (isZoned(lot)) {
       const z = ZONES[lot.kind], cap = z.cap[lot.level - 1], n = Math.round(cap * lot.occ);
-      title = `${ZONE_ICON[lot.kind]} ${t("z." + z.key)}` + (z.levels > 1 ? ` · ${t("level", { n: lot.level })}` : "");
+      title = t("z." + z.key) + (z.levels > 1 ? ` · ${t("level", { n: lot.level })}` : "");
+      ticon = tile(ZONE_ICON[lot.kind], hex(z.color), "zone");
       out.push(this.row(t(z.group === "r" ? "insp.residents" : "insp.workers", { n, cap }), ""));
       if (z.group === "r") out.push(this.meter(t("insp.happy"), lot.happy, pct(lot.happy)));
       else out.push(this.meter(t("insp.eff"), lot.eff, pct(lot.eff)));
@@ -281,7 +283,8 @@ export class Panels {
     } else if (isPlaced(lot)) {
       const def = PLACE_BY_KIND.get(lot.kind);
       if (!def) return null;
-      title = `${def.icon} ${t("b." + def.key)}`;
+      title = t("b." + def.key);
+      ticon = tile(BUILDING_ICON[def.key] ?? "building", CAT_COLOR[def.cat] ?? "#5aa9ff");
       out.push(h("p", { class: "note" }, t("bd." + def.key)));
       const works = city.serviceStrength(lot);
       out.push(this.meter(t("insp.works", { n: Math.round(works * 100) }), works, ""));
@@ -297,8 +300,8 @@ export class Panels {
     out.push(h("button", { class: "danger", onclick: () => {
       const go = () => { city.bulldozeLot(lot); this.game.sound("bulldoze"); this.close(); };
       if (lot.custom) this.ui.confirm("confirm.demolish", { name: "@b." + (PLACE_BY_KIND.get(lot.kind)?.key ?? "") }, go); else go();
-    } }, "🚜 " + t("ui.demolish")));
-    return { title, content: out };
+    } }, icon("hammer"), t("ui.demolish")));
+    return { title, icon: ticon, content: out };
   }
 
   // ------------------------------------------------------------------ options and help

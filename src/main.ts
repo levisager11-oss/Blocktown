@@ -82,7 +82,7 @@ class Game implements GameApi, ToolHost, MenuHost {
       this.sound("achievement");
       if (!insideToki) {
         const a = achievementInfo(id, this.settings.lang);
-        this.ui.toast("ach.toast", "good", { name: `${a.icon} ${a.name}` });
+        this.ui.toast("ach.toast", "good", { name: a.name });
       }
     };
     city.onScore = (board, value) => sendScore(board, value);

@@ -89,44 +89,43 @@ export interface PlaceDef {
   shore?: boolean;
   /** How much nicer it makes the land around it. */
   charm?: number;
-  icon: string;
 }
 export const PLACE: PlaceDef[] = [
-  { kind: Kind.Wind, key: "wind", cat: "power", w: 12, d: 12, cost: 3200, upkeep: 30, jobs: 1, makesPower: 130, unlock: 0, noise: 0.25, icon: "🌬️" },
-  { kind: Kind.Coal, key: "coal", cat: "power", w: 40, d: 30, cost: 9800, upkeep: 190, jobs: 16, makesPower: 900, unlock: 0, pollution: 1, pollutionRadius: 190, noise: 0.6, water: 12, icon: "🏭" },
-  { kind: Kind.Solar, key: "solar", cat: "power", w: 40, d: 30, cost: 15500, upkeep: 110, jobs: 4, makesPower: 620, unlock: 5, icon: "☀️" },
-  { kind: Kind.Nuclear, key: "nuclear", cat: "power", w: 56, d: 44, cost: 98000, upkeep: 1100, jobs: 60, makesPower: 6500, unlock: 8, water: 60, icon: "☢️" },
+  { kind: Kind.Wind, key: "wind", cat: "power", w: 12, d: 12, cost: 3200, upkeep: 30, jobs: 1, makesPower: 130, unlock: 0, noise: 0.25 },
+  { kind: Kind.Coal, key: "coal", cat: "power", w: 40, d: 30, cost: 9800, upkeep: 190, jobs: 16, makesPower: 900, unlock: 0, pollution: 1, pollutionRadius: 190, noise: 0.6, water: 12 },
+  { kind: Kind.Solar, key: "solar", cat: "power", w: 40, d: 30, cost: 15500, upkeep: 110, jobs: 4, makesPower: 620, unlock: 5 },
+  { kind: Kind.Nuclear, key: "nuclear", cat: "power", w: 56, d: 44, cost: 98000, upkeep: 1100, jobs: 60, makesPower: 6500, unlock: 8, water: 60 },
 
-  { kind: Kind.Pump, key: "pump", cat: "water", w: 14, d: 14, cost: 2400, upkeep: 45, jobs: 2, power: 12, makesWater: 520, unlock: 1, shore: true, icon: "🚰" },
-  { kind: Kind.Tower, key: "tower", cat: "water", w: 14, d: 14, cost: 3400, upkeep: 60, jobs: 1, power: 6, makesWater: 220, unlock: 1, icon: "🗼" },
-  { kind: Kind.Outlet, key: "outlet", cat: "water", w: 14, d: 14, cost: 2200, upkeep: 40, jobs: 1, power: 8, sewage: 560, unlock: 1, shore: true, pollution: 0.7, pollutionRadius: 90, icon: "🕳️" },
-  { kind: Kind.Septic, key: "septic", cat: "water", w: 14, d: 14, cost: 2800, upkeep: 60, jobs: 1, sewage: 260, unlock: 1, pollution: 0.45, pollutionRadius: 70, icon: "🪠" },
-  { kind: Kind.Treatment, key: "treatment", cat: "water", w: 32, d: 26, cost: 14500, upkeep: 170, jobs: 10, power: 40, sewage: 1900, unlock: 5, icon: "♻️" },
+  { kind: Kind.Pump, key: "pump", cat: "water", w: 14, d: 14, cost: 2400, upkeep: 45, jobs: 2, power: 12, makesWater: 520, unlock: 1, shore: true },
+  { kind: Kind.Tower, key: "tower", cat: "water", w: 14, d: 14, cost: 3400, upkeep: 60, jobs: 1, power: 6, makesWater: 220, unlock: 1 },
+  { kind: Kind.Outlet, key: "outlet", cat: "water", w: 14, d: 14, cost: 2200, upkeep: 40, jobs: 1, power: 8, sewage: 560, unlock: 1, shore: true, pollution: 0.7, pollutionRadius: 90 },
+  { kind: Kind.Septic, key: "septic", cat: "water", w: 14, d: 14, cost: 2800, upkeep: 60, jobs: 1, sewage: 260, unlock: 1, pollution: 0.45, pollutionRadius: 70 },
+  { kind: Kind.Treatment, key: "treatment", cat: "water", w: 32, d: 26, cost: 14500, upkeep: 170, jobs: 10, power: 40, sewage: 1900, unlock: 5 },
 
-  { kind: Kind.Landfill, key: "landfill", cat: "garbage", w: 36, d: 30, cost: 4200, upkeep: 75, jobs: 6, garbage: 28, unlock: 2, pollution: 0.8, pollutionRadius: 130, noise: 0.3, icon: "🗑️" },
-  { kind: Kind.Recycling, key: "recycling", cat: "garbage", w: 28, d: 24, cost: 9200, upkeep: 130, jobs: 12, power: 20, garbage: 44, unlock: 5, noise: 0.3, icon: "♻️" },
-  { kind: Kind.Incinerator, key: "incinerator", cat: "garbage", w: 32, d: 28, cost: 21000, upkeep: 260, jobs: 14, garbage: 120, makesPower: 260, unlock: 6, pollution: 0.45, pollutionRadius: 120, noise: 0.4, icon: "🔥" },
+  { kind: Kind.Landfill, key: "landfill", cat: "garbage", w: 36, d: 30, cost: 4200, upkeep: 75, jobs: 6, garbage: 28, unlock: 2, pollution: 0.8, pollutionRadius: 130, noise: 0.3 },
+  { kind: Kind.Recycling, key: "recycling", cat: "garbage", w: 28, d: 24, cost: 9200, upkeep: 130, jobs: 12, power: 20, garbage: 44, unlock: 5, noise: 0.3 },
+  { kind: Kind.Incinerator, key: "incinerator", cat: "garbage", w: 32, d: 28, cost: 21000, upkeep: 260, jobs: 14, garbage: 120, makesPower: 260, unlock: 6, pollution: 0.45, pollutionRadius: 120, noise: 0.4 },
 
-  { kind: Kind.Police, key: "police", cat: "police", w: 24, d: 20, cost: 6200, upkeep: 105, jobs: 14, power: 10, water: 4, radius: 230, unlock: 3, icon: "🚓" },
-  { kind: Kind.PoliceHQ, key: "policeHq", cat: "police", w: 36, d: 30, cost: 26000, upkeep: 330, jobs: 50, power: 30, water: 10, radius: 470, unlock: 7, icon: "🏛️" },
-  { kind: Kind.Fire, key: "fire", cat: "fire", w: 24, d: 20, cost: 5800, upkeep: 100, jobs: 12, power: 10, water: 6, radius: 250, unlock: 3, icon: "🚒" },
-  { kind: Kind.FireHQ, key: "fireHq", cat: "fire", w: 36, d: 30, cost: 24000, upkeep: 310, jobs: 44, power: 28, water: 14, radius: 500, unlock: 7, icon: "🧯" },
+  { kind: Kind.Police, key: "police", cat: "police", w: 24, d: 20, cost: 6200, upkeep: 105, jobs: 14, power: 10, water: 4, radius: 230, unlock: 3 },
+  { kind: Kind.PoliceHQ, key: "policeHq", cat: "police", w: 36, d: 30, cost: 26000, upkeep: 330, jobs: 50, power: 30, water: 10, radius: 470, unlock: 7 },
+  { kind: Kind.Fire, key: "fire", cat: "fire", w: 24, d: 20, cost: 5800, upkeep: 100, jobs: 12, power: 10, water: 6, radius: 250, unlock: 3 },
+  { kind: Kind.FireHQ, key: "fireHq", cat: "fire", w: 36, d: 30, cost: 24000, upkeep: 310, jobs: 44, power: 28, water: 14, radius: 500, unlock: 7 },
 
-  { kind: Kind.Clinic, key: "clinic", cat: "health", w: 22, d: 20, cost: 5600, upkeep: 110, jobs: 14, power: 12, water: 6, radius: 230, beds: 1800, unlock: 2, icon: "🩺" },
-  { kind: Kind.Hospital, key: "hospital", cat: "health", w: 40, d: 32, cost: 30000, upkeep: 420, jobs: 70, power: 50, water: 24, radius: 480, beds: 12000, unlock: 5, icon: "🏥" },
+  { kind: Kind.Clinic, key: "clinic", cat: "health", w: 22, d: 20, cost: 5600, upkeep: 110, jobs: 14, power: 12, water: 6, radius: 230, beds: 1800, unlock: 2 },
+  { kind: Kind.Hospital, key: "hospital", cat: "health", w: 40, d: 32, cost: 30000, upkeep: 420, jobs: 70, power: 50, water: 24, radius: 480, beds: 12000, unlock: 5 },
 
-  { kind: Kind.School, key: "school", cat: "edu", w: 28, d: 22, cost: 6400, upkeep: 115, jobs: 14, power: 10, water: 5, radius: 240, seats: 320, unlock: 2, icon: "🏫" },
-  { kind: Kind.HighSchool, key: "highSchool", cat: "edu", w: 36, d: 28, cost: 15000, upkeep: 230, jobs: 26, power: 20, water: 9, radius: 400, seats: 700, unlock: 4, icon: "🎒" },
-  { kind: Kind.University, key: "university", cat: "edu", w: 52, d: 40, cost: 46000, upkeep: 560, jobs: 80, power: 60, water: 24, radius: 700, seats: 2200, unlock: 6, icon: "🎓" },
+  { kind: Kind.School, key: "school", cat: "edu", w: 28, d: 22, cost: 6400, upkeep: 115, jobs: 14, power: 10, water: 5, radius: 240, seats: 320, unlock: 2 },
+  { kind: Kind.HighSchool, key: "highSchool", cat: "edu", w: 36, d: 28, cost: 15000, upkeep: 230, jobs: 26, power: 20, water: 9, radius: 400, seats: 700, unlock: 4 },
+  { kind: Kind.University, key: "university", cat: "edu", w: 52, d: 40, cost: 46000, upkeep: 560, jobs: 80, power: 60, water: 24, radius: 700, seats: 2200, unlock: 6 },
 
-  { kind: Kind.Park, key: "park", cat: "parks", w: 14, d: 16, cost: 700, upkeep: 12, jobs: 0, radius: 95, charm: 0.5, unlock: 1, icon: "🌳" },
-  { kind: Kind.Playground, key: "playground", cat: "parks", w: 14, d: 16, cost: 1100, upkeep: 16, jobs: 0, radius: 110, charm: 0.55, unlock: 3, icon: "🛝" },
-  { kind: Kind.Plaza, key: "plaza", cat: "parks", w: 22, d: 20, cost: 2600, upkeep: 30, jobs: 1, radius: 140, charm: 0.6, unlock: 4, icon: "⛲" },
-  { kind: Kind.BigPark, key: "bigPark", cat: "parks", w: 44, d: 34, cost: 7800, upkeep: 75, jobs: 3, radius: 230, charm: 0.85, unlock: 5, icon: "🏞️" },
-  { kind: Kind.Stadium, key: "stadium", cat: "parks", w: 56, d: 46, cost: 42000, upkeep: 380, jobs: 30, power: 40, water: 12, radius: 520, charm: 0.7, unlock: 7, noise: 0.5, icon: "🏟️" },
+  { kind: Kind.Park, key: "park", cat: "parks", w: 14, d: 16, cost: 700, upkeep: 12, jobs: 0, radius: 95, charm: 0.5, unlock: 1 },
+  { kind: Kind.Playground, key: "playground", cat: "parks", w: 14, d: 16, cost: 1100, upkeep: 16, jobs: 0, radius: 110, charm: 0.55, unlock: 3 },
+  { kind: Kind.Plaza, key: "plaza", cat: "parks", w: 22, d: 20, cost: 2600, upkeep: 30, jobs: 1, radius: 140, charm: 0.6, unlock: 4 },
+  { kind: Kind.BigPark, key: "bigPark", cat: "parks", w: 44, d: 34, cost: 7800, upkeep: 75, jobs: 3, radius: 230, charm: 0.85, unlock: 5 },
+  { kind: Kind.Stadium, key: "stadium", cat: "parks", w: 56, d: 46, cost: 42000, upkeep: 380, jobs: 30, power: 40, water: 12, radius: 520, charm: 0.7, unlock: 7, noise: 0.5 },
 
-  { kind: Kind.BusDepot, key: "busDepot", cat: "transit", w: 30, d: 24, cost: 7000, upkeep: 90, jobs: 12, power: 10, water: 3, unlock: 4, noise: 0.3, icon: "🚌" },
-  { kind: Kind.Metro, key: "metro", cat: "transit", w: 16, d: 14, cost: 9500, upkeep: 85, jobs: 6, power: 30, unlock: 7, icon: "🚇" },
+  { kind: Kind.BusDepot, key: "busDepot", cat: "transit", w: 30, d: 24, cost: 7000, upkeep: 90, jobs: 12, power: 10, water: 3, unlock: 4, noise: 0.3 },
+  { kind: Kind.Metro, key: "metro", cat: "transit", w: 16, d: 14, cost: 9500, upkeep: 85, jobs: 6, power: 30, unlock: 7 },
 ];
 export const PLACE_BY_KIND = new Map<number, PlaceDef>(PLACE.map((p) => [p.kind, p]));
 
