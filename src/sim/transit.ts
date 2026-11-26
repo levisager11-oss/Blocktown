@@ -1,6 +1,6 @@
 // Bus and metro lines. People who live and work near stops of the same line (or of two lines that meet)
 // leave the car at home.
-import { BUS, Kind, METRO } from "./defs";
+import { BUS, Kind, METRO, ROADS, TRAM } from "./defs";
 import type { City } from "./city";
 import { LF, Lot } from "./lots";
 import { clamp01 } from "./util";
@@ -8,6 +8,8 @@ import { clamp01 } from "./util";
 export interface Stop { x: number; z: number; seg: number; s: number; lot?: number }
 export interface Line {
   id: number; metro: boolean; stops: Stop[]; vehicles: number; color: number;
+  /** A tram line (on roads with tracks) rather than a bus line. */
+  tram?: boolean;
   /** Passengers yesterday and so far today. */
   riders: number; today: number; dead: boolean;
 }
@@ -31,30 +33,43 @@ export class Transit {
     for (const lot of this.city.lots.lots.values()) if (lot.kind === Kind.BusDepot && lot.built >= 1 && lot.flags & LF.Road) n++;
     return n;
   }
-  busesInUse(): number { return this.lines.reduce((s, l) => s + (l.metro ? 0 : l.vehicles), 0); }
+  busesInUse(): number { return this.lines.reduce((s, l) => s + (l.metro || l.tram ? 0 : l.vehicles), 0); }
   busesFree(): number { return this.depots() * BUS.busesPerDepot - this.busesInUse(); }
+  tramDepots(): number {
+    let n = 0;
+    for (const lot of this.city.lots.lots.values()) if (lot.kind === Kind.TramDepot && lot.built >= 1 && lot.flags & LF.Road) n++;
+    return n;
+  }
+  tramsInUse(): number { return this.lines.reduce((s, l) => s + (l.tram ? l.vehicles : 0), 0); }
+  tramsFree(): number { return this.tramDepots() * TRAM.tramsPerDepot - this.tramsInUse(); }
 
-  lineCost(metro: boolean, stops: Stop[]): number {
+  lineCost(metro: boolean, stops: Stop[], tram = false): number {
+    if (tram) return stops.length * TRAM.stopCost;
     if (!metro) return stops.length * BUS.stopCost;
     let len = 0;
     for (let i = 0; i + 1 < stops.length; i++) len += Math.hypot(stops[i + 1].x - stops[i].x, stops[i + 1].z - stops[i].z);
     return Math.round(len * METRO.trackCost);
   }
 
-  /** Opens a line. Returns it, or why not: stops, lines, depot, buses, money. */
-  addLine(metro: boolean, stops: Stop[]): Line | string {
+  /** Opens a line. Returns it, or why not: stops, lines, depot, buses, tramDepot, trams, tracks, money. */
+  addLine(metro: boolean, stops: Stop[], tram = false): Line | string {
     if (stops.length < 2) return "stops";
     if (this.lines.length >= MAX_LINES) return "lines";
-    if (!metro && !this.depots()) return "depot";
-    if (!metro && this.busesFree() < 1) return "buses";
-    if (!this.city.spend(this.lineCost(metro, stops))) return "money";
+    if (tram) {
+      if (!this.tramDepots()) return "tramDepot";
+      if (this.tramsFree() < 1) return "trams";
+      if (stops.some((s) => { const seg = this.city.roads.segs.get(s.seg); return !seg || !ROADS[seg.type].tram; })) return "tracks";
+    } else if (!metro && !this.depots()) return "depot";
+    else if (!metro && this.busesFree() < 1) return "buses";
+    if (!this.city.spend(this.lineCost(metro, stops, tram))) return "money";
     const line: Line = {
-      id: this.next++, metro, stops, vehicles: metro ? 2 : Math.min(2, this.busesFree()), color: LINE_COLORS[(this.next + 6) % LINE_COLORS.length],
+      id: this.next++, metro, stops, vehicles: metro ? 2 : tram ? Math.min(2, this.tramsFree()) : Math.min(2, this.busesFree()), color: LINE_COLORS[(this.next + 6) % LINE_COLORS.length],
       riders: 0, today: 0, dead: false,
     };
+    if (tram) line.tram = true;
     this.lines.push(line);
     this.version++;
-    this.city.bump(metro ? "metroLines" : "busLines");
+    this.city.bump(metro ? "metroLines" : tram ? "tramLines" : "busLines");
     return line;
   }
 
@@ -66,7 +81,8 @@ export class Transit {
 
   setVehicles(line: Line, n: number): boolean {
     n = Math.max(1, Math.min(line.metro ? 8 : 12, n));
-    if (!line.metro && n > line.vehicles && this.busesFree() < n - line.vehicles) return false;
+    if (line.tram && n > line.vehicles && this.tramsFree() < n - line.vehicles) return false;
+    if (!line.metro && !line.tram && n > line.vehicles && this.busesFree() < n - line.vehicles) return false;
     line.vehicles = n;
     this.version++;
     return true;
@@ -74,7 +90,7 @@ export class Transit {
 
   /** How many passengers a line can carry a day. */
   capacity(line: Line): number {
-    return line.vehicles * (line.metro ? METRO.trainSeats : BUS.busSeats) * this.city.budgetPower("transit");
+    return line.vehicles * (line.metro ? METRO.trainSeats : line.tram ? TRAM.tramSeats : BUS.busSeats) * this.city.budgetPower("transit");
   }
 
   /** Which lines stop within reach of a plot, as bits. */
@@ -96,7 +112,7 @@ export class Transit {
     if (m === undefined) {
       m = 0;
       this.lines.forEach((line, i) => {
-        const reach = line.metro ? METRO.reach : BUS.reach;
+        const reach = line.metro ? METRO.reach : line.tram ? TRAM.reach : BUS.reach;
         if (line.stops.some((p) => Math.hypot(p.x - lot.x, p.z - lot.z) < reach)) m! |= 1 << i;
       });
       this.masks.set(lot.id, m);
@@ -123,7 +139,7 @@ export class Transit {
       const line = this.lines[i];
       const full = line.today / Math.max(1, this.capacity(line) * clamp01(this.city.hour / 24 + 0.08));
       if (full > 1.15) continue;
-      const share = (line.metro ? 0.58 : 0.36) * (change ? 0.6 : 1) * (dist > 400 ? 1.15 : 1);
+      const share = (line.metro ? 0.58 : line.tram ? 0.48 : 0.36) * (change ? 0.6 : 1) * (dist > 400 ? 1.15 : 1);
       if (Math.random() > share) return false;
       line.today += w * RIDERS_PER_TRIP;
       return true;
@@ -146,7 +162,7 @@ export class Transit {
     for (const line of this.lines) {
       if (line.metro) continue;
       line.stops = line.stops.filter((stop) => {
-        const hit = roads.nearestSeg(stop.x, stop.z, 5);
+        const hit = roads.nearestSeg(stop.x, stop.z, 5, line.tram ? (s) => !ROADS[s.type].tram : undefined);
         if (!hit) { changed = true; return false; }
         stop.seg = hit.seg.id;
         stop.s = hit.s;

@@ -14,7 +14,7 @@ function colored(geo: THREE.BufferGeometry, r: number, g: number, b: number): TH
 }
 
 // Size of each kind of vehicle: length, height, width.
-const SIZE = [[4.4, 1.5, 2.1], [8.6, 2.9, 2.5], [10.5, 3, 2.6], [8.4, 2.8, 2.5]];
+const SIZE = [[4.4, 1.5, 2.1], [8.6, 2.9, 2.5], [10.5, 3, 2.6], [8.4, 2.8, 2.5], [16, 3.1, 2.5]];
 
 export class Cars {
   mesh: THREE.InstancedMesh;

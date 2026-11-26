@@ -1,6 +1,6 @@
 // The city's inner workings, worked out once a game hour: power and water, who lives and works where,
 // how happy people are, what gets built next, and the money.
-import { BUDGET_CATS, BUS, Kind, METRO, PLACE_BY_KIND, ROADS, SERVICE_JOB_MIX, ZONES, Zone, jobMix } from "./defs";
+import { BUDGET_CATS, BUS, Kind, METRO, PLACE_BY_KIND, ROADS, SERVICE_JOB_MIX, TOURIST_SPEND, TRAM, ZONES, Zone, jobMix } from "./defs";
 import type { City } from "./city";
 import { LF, Lot, isZoned } from "./lots";
 import { clamp, clamp01 } from "./util";
@@ -101,8 +101,10 @@ export function census(city: City) {
   const J = [0, 0, 0, 0];
   let pop = 0, homes = 0, buildings = 0, problems = 0, blocked = 0, landSum = 0, landN = 0;
   let cCap = 0, iCap = 0, oCap = 0, sJobs = 0;
-  city.homes.length = city.works.length = city.shops.length = city.factories.length = city.raws.length = 0;
-  let beds = 0, garbageCap = 0;
+  city.homes.length = city.works.length = city.shops.length = city.factories.length = city.raws.length = city.sights.length = 0;
+  let beds = 0, garbageCap = 0, attraction = 0;
+  const bonus = city.bonus;
+  bonus.happy = bonus.tax = bonus.trade = bonus.visitors = bonus.offices = 0;
   const seats = [0, 0, 0];
 
   for (const lot of lots.values()) {
@@ -140,6 +142,13 @@ export function census(city: City) {
         if (def.beds) beds += def.beds * strength;
         if (def.garbage) garbageCap += def.garbage * strength;
         if (def.seats) seats[def.kind === Kind.School ? 0 : def.kind === Kind.HighSchool ? 1 : 2] += def.seats * strength;
+        if (def.tourism) { city.sights.push(lot); attraction += def.tourism * Math.min(1, strength) * (0.4 + 0.6 * lot.access); }
+        const k = Math.min(1, strength);
+        bonus.happy += (def.happy ?? 0) * k;
+        bonus.tax += (def.taxBonus ?? 0) * k;
+        bonus.trade += (def.trade ?? 0) * k;
+        bonus.visitors += (def.visitors ?? 0) * k;
+        bonus.offices += (def.offices ?? 0) * k;
       }
     }
   }
@@ -213,7 +222,7 @@ export function census(city: City) {
     h += 0.05 * (act.safety ? maps.at("fire", lot.x, lot.z) : 0.6);
     h += 0.07 * (act.edu ? Math.max(maps.at("school", lot.x, lot.z), maps.at("high", lot.x, lot.z)) : 0.6);
     h += 0.13 * (parks ? maps.at("charm", lot.x, lot.z) : 0.5);
-    h += 0.08 * jobsOk + 0.06 * shopsOk + 0.08 * clamp01((lot.access - 0.3) / 0.7);
+    h += 0.08 * jobsOk + 0.06 * shopsOk + 0.08 * clamp01((lot.access - 0.3) / 0.7) + Math.min(0.08, bonus.happy);
     let bad = 0.3 * maps.at("pollution", lot.x, lot.z) + 0.1 * maps.at("noise", lot.x, lot.z);
     if (act.garbage) bad += 0.12 * (1 - garbageOk);
     if (waterOn && !(lot.flags & LF.Sewage)) bad += 0.15;
@@ -233,6 +242,9 @@ export function census(city: City) {
   st.students = students; st.seats = seats; st.beds = beds; st.garbageCap = garbageCap; st.garbageNeed = garbageNeed;
   st.quality = quality; st.land = landN ? landSum / landN : 0.3;
   st.flow = city.traffic.flow; st.cars = city.traffic.agents.length;
+  // Visitors come for the sights, more when the city is happy and the sun shines.
+  const W = city.weather;
+  st.tourists = attraction * (0.55 + 0.6 * st.happy) * (1 + bonus.visitors) * (W.sky === "rain" || W.sky === "storm" ? 0.7 : W.sky === "snow" ? 0.8 : 1);
 
   // Goods: farms, forests, mines and oil fields feed the factories, the factories feed the shops.
   const rawMake = [0, 0, 0, 0];
@@ -252,6 +264,7 @@ export function demand(city: City) {
   // Homes are wanted when there are free jobs and people like it here.
   let r = clamp((st.jobs - workers) / Math.max(40, workers * 0.25), -1, 1) * 0.75 + (st.happy - 0.5) * 0.7 + 0.1 - pain(t.r);
   if (pop < 160) r = Math.max(r, 0.65);
+  r += city.bonus.happy * 0.5;
   // Homes that are built but not lived in yet: no need for more.
   if (st.homes > 60 && pop < st.homes * 0.55) r = Math.min(r, -0.05);
   const cWant = pop * 0.135;
@@ -260,7 +273,7 @@ export function demand(city: City) {
   const otherWant = Math.max(0, workers * 1.06 - Math.min(cWant, st.cCap + 20) - st.sJobs);
   const iWant = otherWant * (1 - officeShare), oWant = otherWant * officeShare;
   const i = clamp((iWant - st.iCap) / Math.max(30, iWant * 0.3), -1, 1) - pain(t.i);
-  const o = officeShare > 0 ? clamp((oWant - st.oCap) / Math.max(30, oWant * 0.3), -1, 1) - pain(t.o) : -1;
+  const o = officeShare > 0 ? clamp((oWant - st.oCap) / Math.max(30, oWant * 0.3), -1, 1) - pain(t.o) + city.bonus.offices : -1;
   const d = city.demand, k = 0.35;
   d.r += (clamp(r, -1, 1) - d.r) * k;
   d.c += (clamp(c, -1, 1) - d.c) * k;
@@ -271,7 +284,7 @@ export function demand(city: City) {
 /** Taxes in, upkeep out. */
 export function budget(city: City) {
   const st = city.stats, rules = city.modeRules(), t = city.taxes;
-  const inc: Record<string, number> = { r: 0, c: 0, i: 0, o: 0, fares: 0, trade: 0 };
+  const inc: Record<string, number> = { r: 0, c: 0, i: 0, o: 0, fares: 0, trade: 0, tourism: 0 };
   const exp: Record<string, number> = { roads: 0, loans: 0 };
   for (const cat of BUDGET_CATS) exp[cat] = 0;
 
@@ -284,7 +297,8 @@ export function budget(city: City) {
   const goodsExtra = Math.max(0, st.goodsMake - st.goodsNeed);
   st.exports = rawExtra + goodsExtra;
   st.imports = rawNeedSum - rawLocal + Math.max(0, st.goodsNeed - st.goodsMake);
-  inc.trade = rawExtra * 0.9 + goodsExtra * 0.45;
+  inc.trade = (rawExtra * 0.9 + goodsExtra * 0.45) * (1 + city.bonus.trade);
+  inc.tourism = st.tourists * TOURIST_SPEND;
   city.count.exported = (city.count.exported ?? 0) + st.exports / 24;
 
   for (const lot of city.lots.lots.values()) {
@@ -301,10 +315,12 @@ export function budget(city: City) {
       if (def) exp[def.cat] += def.upkeep * city.budget[def.cat];
     }
   }
-  for (const seg of city.roads.segs.values()) if (!seg.fixed) exp.roads += seg.len * ROADS[seg.type].upkeep * (seg.bridgeLen > 6 ? 1.8 : 1);
+  const taxUp = 1 + city.bonus.tax;
+  inc.r *= taxUp; inc.c *= taxUp; inc.i *= taxUp; inc.o *= taxUp;
+  for (const seg of city.roads.segs.values()) if (!seg.fixed) exp.roads += seg.len * ROADS[seg.type].upkeep * (seg.bridgeLen > 6 || seg.tunnel ? 1.8 : 1);
   for (const line of city.transit.lines) {
-    const p = line.metro ? METRO : BUS;
-    exp.transit += line.vehicles * (line.metro ? METRO.trainUpkeep : BUS.busUpkeep) * city.budget.transit;
+    const p = line.metro ? METRO : line.tram ? TRAM : BUS;
+    exp.transit += line.vehicles * (line.metro ? METRO.trainUpkeep : line.tram ? TRAM.tramUpkeep : BUS.busUpkeep) * city.budget.transit;
     inc.fares += line.riders * p.fare;
   }
   for (const loan of city.loans) exp.loans += loan.perDay;

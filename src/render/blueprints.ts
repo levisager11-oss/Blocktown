@@ -858,6 +858,290 @@ function metro(): Out {
   return o;
 }
 
+
+// ---------------------------------------------------------------- trams and landmarks
+function tramDepot(r: Rand): Out {
+  const o: Out = [];
+  patch(o, 0, 2, 32, 21, ASPHALT);
+  box(o, -3, 0, -6, 24, 6.5, 11, 0xe4ddd0);
+  gable(o, -3, 6.5, -6, 24.6, 3.2, 11.6, 0x8a3b32);
+  for (const x of [-11, -3, 5]) box(o, x, 0, -0.45, 6, 5, 0.2, 0x6b7480);
+  win(o, 12.5, 0, -6, 5, 7, 8, 0xe9eef1);
+  // tracks and two trams
+  for (const x of [-11, -3, 5]) patch(o, x, 6, 1.8, 13, 0x8d8579, 0.12, 0.1);
+  for (const x of [-11, 5]) {
+    box(o, x, 0.25, 6.5, 2.6, 3.1, 11, pick(r, [0xe8c23a, 0xd94f4f]));
+    box(o, x, 1.6, 6.5, 2.7, 1.1, 9.5, 0x2f3d4a);
+    box(o, x, 3.35, 6.5, 0.2, 0.9, 0.2, 0x39424e);
+  }
+  box(o, 13, 0, 9, 0.3, 4.5, 0.3, 0x6b7480);
+  box(o, 13, 4.1, 9, 2.2, 1.1, 0.3, 0xe8c23a);
+  return o;
+}
+
+function monument(r: Rand): Out {
+  const o: Out = [];
+  const stone = 0xe9e4d8, gold = 0xf2c14e;
+  patch(o, 0, 0, 17, 17, 0xd9d4c7);
+  patch(o, 0, 0, 11, 11, 0xcac3b2, 0.12, 0.3);
+  box(o, 0, 0.4, 0, 7, 1.2, 7, stone);
+  box(o, 0, 1.6, 0, 5, 1.2, 5, stone);
+  box(o, 0, 2.8, 0, 2.6, 18, 2.6, 0xf3efe6);
+  pyramid(o, 0, 20.8, 0, 2.6, 2.4, 2.6, gold);
+  box(o, 0, 3.6, 1.36, 1.6, 1.6, 0.1, gold);
+  for (const [x, z] of [[-6.5, -6.5], [6.5, -6.5], [-6.5, 6.5], [6.5, 6.5]] as [number, number][]) tree(o, x, z, 0.9, pick(r, GREENS), true);
+  for (const [x, z] of [[0, -6.8], [-6.8, 0], [6.8, 0]] as [number, number][]) patch(o, x, z, 3, 1.4, 0xe0679a, 0.12, 0.5);
+  return o;
+}
+
+function cityHall(r: Rand): Out {
+  const o: Out = [];
+  const stone = 0xeee6d6, roof = 0x5f7d8c;
+  patch(o, 0, 0, 31, 25, 0xd9d4c7);
+  patch(o, -10, 8, 7, 7, 0x6fb35a, 0.12, 0.2);
+  patch(o, 10, 8, 7, 7, 0x6fb35a, 0.12, 0.2);
+  win(o, 0, 0, -3, 26, 9, 12, stone);
+  box(o, 0, 9, -3, 26.6, 0.8, 12.6, 0xd8cfbd);
+  box(o, 0, 0, 4.2, 12, 0.6, 3, 0xd8cfbd);
+  box(o, 0, 0.6, 4.4, 12, 0.6, 2, 0xd8cfbd);
+  for (let i = 0; i < 6; i++) cyl(o, -5 + i * 2, 1.2, 4.2, 0.9, 7.8, 0.9, 0xfaf6ee);
+  box(o, 0, 9, 4.2, 12.4, 0.8, 1.6, 0xd8cfbd);
+  gable(o, 0, 9.8, 4.2, 12.4, 2.6, 1.6, stone);
+  box(o, 0, 9.8, -3, 7, 5, 7, stone);
+  cyl(o, 0, 14.8, -3, 5.6, 3, 5.6, 0xfaf6ee);
+  dome(o, 0, 17.8, -3, 5.6, 2.8, 5.6, roof);
+  box(o, 0, 23.2, -3, 0.3, 2.6, 0.3, 0xf2c14e);
+  cyl(o, 0, 12, 0.55, 2.2, 2.2, 0.2, 0xffffff, { rx: Math.PI / 2 });
+  flag(o, -12.5, 9.5, pick(r, [0xd94f4f, 0x3f7fd0, 0x4aa86a]));
+  flag(o, 12.5, 9.5, 0xf2c14e);
+  return o;
+}
+
+/** A big wheel standing in the x-y plane, its hub at height h. */
+function wheel(o: Out, x: number, z: number, h: number, R: number, turn = 0): void {
+  const first = o.length;
+  wheelParts(o, x, z, h, R, turn);
+  for (let i = first; i < o.length; i++) o[i].tag = "wheel";
+}
+export function wheelParts(o: Out, x: number, z: number, h: number, R: number, turn: number): void {
+  const n = 16, seg = (2 * Math.PI * R) / n;
+  const cabins = [0xe8553d, 0xf2b134, 0x3fa7d6, 0x59b36a, 0xd9569a, 0x9b6bd6];
+  for (let i = 0; i < n; i++) {
+    const t = turn + (i / n) * Math.PI * 2;
+    const px = x + Math.cos(t) * R, py = h + Math.sin(t) * R;
+    // a piece of the rim, along the circle
+    box(o, px + Math.sin(t) * seg * 0.5, py - Math.cos(t) * seg * 0.5, z, 0.5, seg * 1.02, 0.5, 0xf5f6f4, { rz: t });
+    // a spoke from the hub
+    if (i % 2 === 0) box(o, x, h, z, 0.25, R, 0.25, 0xdfe3e6, { rz: t - Math.PI / 2 });
+    if (i % 2 === 0) box(o, px, py - 2.1, z, 1.6, 1.7, 1.6, cabins[(i / 2) % cabins.length]);
+  }
+  cyl(o, x, h - 0.9, z - 0.6, 1.8, 1.8, 1.8, 0x9aa0a6, { rx: Math.PI / 2 });
+}
+
+function ferris(r: Rand): Out {
+  const o: Out = [];
+  patch(o, 0, 0, 39, 31, 0xd9cfb4);
+  patch(o, -12, -8, 12, 12, 0x6fb35a, 0.12, 0.2);
+  const hub = 15, R = 12.5;
+  // two A-frames holding the hub
+  for (const z of [-2.2, 1.6]) {
+    box(o, -5, 0, z, 0.8, hub / Math.cos(0.33), 0.8, 0xc8ccd0, { rz: -0.33 });
+    box(o, 5, 0, z, 0.8, hub / Math.cos(0.33), 0.8, 0xc8ccd0, { rz: 0.33 });
+  }
+  wheel(o, 0, 0.4, hub, R);
+  // a carousel, stalls and trees
+  cyl(o, 13, 0, -6, 8, 0.6, 8, 0xe8d9b5);
+  for (let i = 0; i < 8; i++) { const t = (i / 8) * Math.PI * 2; cyl(o, 13 + Math.cos(t) * 3, 0.6, -6 + Math.sin(t) * 3, 0.3, 3, 0.3, 0xf2c14e); }
+  cone(o, 13, 3.6, -6, 9, 3, 9, 0xd94f4f);
+  for (const [x, c] of [[-13, 0xe8553d], [-8, 0x3fa7d6], [9, 0x59b36a]] as [number, number][]) {
+    box(o, x, 0, 11, 3.4, 2.6, 3, 0xf6efe0);
+    box(o, x, 2.6, 11, 3.8, 0.5, 3.6, c);
+  }
+  for (const [x, z] of [[-16, -12], [-9, -12], [-16, -5], [17, 9], [17, 3]] as [number, number][]) tree(o, x, z, 1, pick(r, GREENS), r() < 0.6);
+  return o;
+}
+
+function tvTower(): Out {
+  const o: Out = [];
+  patch(o, 0, 0, 21, 21, 0xd9d4c7);
+  box(o, 0, 0, 0, 14, 5, 14, 0xdfe3e6);
+  win(o, 0, 0, 7.2, 10, 4, 0.4, 0xe9eef1);
+  add(o, "tower", 0, 5, 0, 6, 62, 6, 0xe9ecef);
+  cyl(o, 0, 50, 0, 12, 3, 12, 0xdfe3e6);
+  win(o, 0, 53, 0, 10, 4, 10, 0xc9d8e6);
+  cyl(o, 0, 57, 0, 11, 1.2, 11, 0xdfe3e6);
+  dome(o, 0, 58.2, 0, 7, 3, 7, 0xd94f4f);
+  box(o, 0, 61, 0, 0.8, 9, 0.8, 0xf5f6f4);
+  box(o, 0, 70, 0, 0.5, 5, 0.5, 0xd94f4f);
+  return o;
+}
+
+function harbour(r: Rand): Out {
+  const o: Out = [];
+  patch(o, 0, 0, 51, 35, 0xb9bcbc);
+  // a warehouse
+  box(o, -14, 0, 8, 20, 8, 12, 0xd7c3a3);
+  gable(o, -14, 8, 8, 20.4, 2.4, 12.4, 0x6b7480);
+  for (const x of [-20, -14, -8]) box(o, x, 0, 14.1, 4, 5, 0.2, 0x8a959f);
+  // stacks of containers
+  const colors = [0xd94f4f, 0x3f7fd0, 0xf2b134, 0x4aa86a, 0xe07a2f, 0x7a4fd0, 0xeeeeee];
+  for (let i = 0; i < 4; i++)
+    for (let j = 0; j < 3; j++) {
+      const hgt = 1 + Math.floor(r() * 3);
+      for (let k = 0; k < hgt; k++) box(o, 4 + i * 3.1, k * 2.6, 6 + j * 6.6, 2.6, 2.5, 6.2, pick(r, colors));
+    }
+  // two cranes at the quay
+  for (const x of [-6, 14]) {
+    box(o, x - 3, 0, -10, 1, 20, 1, 0xe8b23a);
+    box(o, x + 3, 0, -10, 1, 20, 1, 0xe8b23a);
+    box(o, x, 20, -9, 8, 2, 2, 0xe8b23a);
+    box(o, x, 21, -12, 1.4, 1.4, 22, 0xe8b23a);
+    box(o, x, 18, -16, 0.2, 3, 0.2, 0x39424e);
+  }
+  for (let x = -22; x <= 22; x += 6) cyl(o, x, 0, -16.5, 0.9, 1, 0.9, 0x39424e);
+  return o;
+}
+
+function cathedral(): Out {
+  const o: Out = [];
+  const stone = 0xdcd2bf, roof = 0x5fa08a;
+  patch(o, 0, 0, 33, 43, 0xd9d4c7);
+  // the nave and the crossing
+  box(o, 0, 0, -2, 12, 13, 30, stone);
+  gable(o, 0, 13, -2, 12.4, 6, 30.4, roof, true);
+  box(o, 0, 0, -6, 26, 11, 9, stone);
+  gable(o, 0, 11, -6, 26.4, 5, 9.4, roof);
+  cyl(o, 0, 0, -17, 12, 10, 8, stone);
+  dome(o, 0, 10, -17, 12, 3, 8, roof);
+  // a tower over the crossing
+  box(o, 0, 13, -6, 5, 8, 5, stone);
+  add(o, "cone", 0, 21, -6, 5.6, 10, 5.6, roof);
+  // the front with two towers and a round window
+  for (const x of [-7.5, 7.5]) {
+    box(o, x, 0, 14.5, 5.5, 22, 5.5, stone);
+    pyramid(o, x, 22, 14.5, 5.6, 9, 5.6, roof);
+    box(o, x, 14, 17.3, 1.6, 4, 0.1, 0x5a6b8c);
+  }
+  box(o, 0, 0, 14.5, 9.5, 16, 5, stone);
+  gable(o, 0, 16, 14.5, 9.8, 4, 5.2, stone);
+  cyl(o, 0, 10.5, 17.05, 4.2, 4.2, 0.2, 0x7a5ad8, { rx: Math.PI / 2 });
+  box(o, 0, 0, 17.1, 3.2, 5.2, 0.2, 0x6b4a36);
+  for (const x of [-10, 10]) for (const z of [-12, 2]) tree(o, x + (x < 0 ? -4 : 4), z, 1, GREENS[1], true);
+  return o;
+}
+
+/** A rocket standing at (x, y, z) with its two boosters. */
+export function rocket(o: Out, x: number, y: number, z: number): void {
+  cyl(o, x, y, z, 4.2, 40, 4.2, 0xf5f6f4);
+  cone(o, x, y + 40, z, 4.2, 7, 4.2, 0xd94f4f);
+  for (const dx of [-3.1, 3.1]) {
+    cyl(o, x + dx, y, z, 2, 20, 2, 0xe9ecef);
+    cone(o, x + dx, y + 20, z, 2, 3, 2, 0xe9ecef);
+  }
+}
+
+/** A plane standing on the ground, nose pointing along +x (or turned by ry). */
+export function plane(o: Out, x: number, z: number, s: number, ry: number, c: number): void {
+  const t = { ry };
+  const cx = Math.cos(ry), sz = -Math.sin(ry);
+  cyl(o, x - cx * 8 * s, 1.2 * s, z - sz * 8 * s, 2.4 * s, 16 * s, 2.4 * s, c, { ry, rz: -Math.PI / 2 });
+  cone(o, x + cx * 8 * s, 1.2 * s, z + sz * 8 * s, 2.4 * s, 3 * s, 2.4 * s, 0xdfe3e6);
+  box(o, x, 1.9 * s, z, 4 * s, 0.4 * s, 16 * s, 0xdfe3e6, t);
+  box(o, x - cx * 7 * s, 2.4 * s, z - sz * 7 * s, 2.2 * s, 3.6 * s, 0.4 * s, c, t);
+  box(o, x - cx * 7.2 * s, 2.2 * s, z - sz * 7.2 * s, 1.8 * s, 0.3 * s, 6 * s, 0xdfe3e6, t);
+  box(o, x, 0, z, 1 * s, 1.2 * s, 6 * s, 0x39424e, t);
+}
+
+function airport(r: Rand): Out {
+  const o: Out = [];
+  patch(o, 0, 0, 119, 71, 0x8fbf6a);
+  // the runway with its markings
+  patch(o, 0, -24, 116, 12, 0x4b4e56, 0.12, 0.15);
+  for (let x = -50; x <= 50; x += 10) patch(o, x, -24, 5, 0.6, 0xf5f6f4, 0.27, 0.05);
+  for (const x of [-55, 55]) for (let k = -2; k <= 2; k++) patch(o, x, -24 + k * 2, 3, 0.8, 0xf5f6f4, 0.27, 0.05);
+  // taxiway and apron
+  patch(o, 0, -10, 90, 5, 0x5b6168, 0.12, 0.14);
+  patch(o, 10, 6, 76, 18, 0x6b7178, 0.12, 0.14);
+  // the terminal
+  win(o, 10, 0, 22, 70, 8, 10, 0xd9e8f0);
+  cyl(o, 10, 6.5, 22, 70, 6, 11, 0xe9ecef, { rz: Math.PI / 2 });
+  for (const x of [-10, 10, 30]) {
+    box(o, x, 3, 13, 2.4, 2.6, 8, 0xc4cdd2);
+  }
+  // the control tower
+  cyl(o, -40, 0, 16, 4, 22, 4, 0xe9ecef);
+  win(o, -40, 22, 16, 7, 4, 7, 0x7fb6d6);
+  box(o, -40, 26, 16, 8, 0.8, 8, 0x39424e);
+  // a hangar
+  box(o, -44, 0, 0, 18, 9, 14, 0xc4cdd2);
+  cyl(o, -44, 5, 0, 18, 8, 14.4, 0xb9c4cc, { rz: Math.PI / 2 });
+  plane(o, -10, 6, 1, 0, pick(r, [0x3f7fd0, 0xd94f4f]));
+  plane(o, 26, 6, 1, 0, pick(r, [0x4aa86a, 0xe8b23a]));
+  plane(o, 30, -24, 1.1, Math.PI, 0xf5f6f4);
+  return o;
+}
+
+function opera(r: Rand): Out {
+  const o: Out = [];
+  patch(o, 0, 0, 43, 35, 0xd9d4c7);
+  box(o, 0, 0, -4, 34, 4, 24, 0xc9b79c);
+  // three white shells
+  dome(o, -9, 4, -4, 14, 9, 20, 0xf5f6f4);
+  dome(o, 3, 4, -6, 12, 7.5, 17, 0xf2f2ee);
+  dome(o, 12, 4, -2, 9, 5.5, 12, 0xf5f6f4);
+  // the glass foyer
+  win(o, 0, 0, 10, 28, 7, 6, 0xb8d4e6);
+  box(o, 0, 7, 10, 29, 0.6, 7, 0xe9ecef);
+  for (let i = 0; i < 8; i++) cyl(o, -12.6 + i * 3.6, 0, 13.6, 0.6, 7, 0.6, 0xfaf6ee);
+  // a fountain
+  cyl(o, -15, 0, 14, 5, 0.6, 5, 0xb9bcbc);
+  cyl(o, -15, 0.6, 14, 4, 0.2, 4, 0x5aa9e6);
+  cyl(o, -15, 0.6, 14, 0.5, 2.4, 0.5, 0xd5e9f7);
+  for (const [x, z] of [[17, 14], [19, 6], [-19, 4]] as [number, number][]) tree(o, x, z, 1, pick(r, GREENS), true);
+  return o;
+}
+
+function spire(): Out {
+  const o: Out = [];
+  const glass = 0x6aa8c8, steel = 0xc4cdd2, gold = 0xf2c14e;
+  patch(o, 0, 0, 29, 29, 0xd9d4c7);
+  box(o, 0, 0, 0, 24, 8, 24, steel);
+  win(o, 0, 8, 0, 20, 46, 20, glass);
+  box(o, 0, 54, 0, 21, 1.2, 21, steel);
+  win(o, 0, 55.2, 0, 16, 40, 16, glass);
+  box(o, 0, 95.2, 0, 17, 1.2, 17, steel);
+  win(o, 0, 96.4, 0, 11, 26, 11, glass);
+  box(o, 0, 122.4, 0, 12, 1.2, 12, gold);
+  pyramid(o, 0, 123.6, 0, 11, 10, 11, 0x9cc8e0);
+  box(o, 0, 133.6, 0, 0.6, 16, 0.6, 0xf5f6f4);
+  box(o, 0, 0, 12.2, 8, 5, 0.4, gold);
+  return o;
+}
+
+function space(r: Rand): Out {
+  const o: Out = [];
+  patch(o, 0, 0, 91, 69, 0xc9c3a8);
+  // the launch pad with its rocket and tower
+  cyl(o, -24, 0, -14, 22, 1.5, 22, 0x9aa0a6);
+  const first = o.length;
+  rocket(o, -24, 1.5, -14);
+  for (let i = first; i < o.length; i++) o[i].tag = "rocket";
+  box(o, -24, 30, -14, 0.6, 0.6, 1, 0x39424e);
+  for (const [dx, dz] of [[-2.2, -9], [2.2, -9]] as [number, number][]) box(o, -24 + dx, 1.5, -14 + dz, 1.2, 46, 1.2, 0xd94f4f);
+  box(o, -24, 1.5, -23, 5.6, 1, 1.2, 0xd94f4f);
+  for (let h = 8; h < 46; h += 9) box(o, -24, 1.5 + h, -23, 5.6, 0.6, 1.2, 0xd94f4f);
+  // the assembly hall and mission control
+  win(o, 20, 0, -12, 30, 30, 24, 0xe9ecef);
+  box(o, 20, 26, 0.4, 14, 3, 0.4, 0x3f7fd0);
+  win(o, 22, 0, 22, 34, 6, 14, 0xb8d4e6);
+  box(o, 22, 6, 22, 35, 0.6, 15, 0xc4cdd2);
+  // a dish
+  cyl(o, -30, 0, 22, 1.2, 8, 1.2, 0xdfe3e6);
+  dome(o, -30, 8, 22, 12, 4, 12, 0xf5f6f4);
+  for (const [x, z] of [[-42, 30], [-10, 30], [42, 30]] as [number, number][]) tree(o, x, z, 1.1, pick(r, GREENS), r() < 0.5);
+  return o;
+}
+
 // ---------------------------------------------------------------- the plan for each kind
 function build(kind: number, level: number, r: Rand): Out | null {
   const l = Math.min(3, Math.max(1, Math.round(level) || 1));
@@ -900,6 +1184,17 @@ function build(kind: number, level: number, r: Rand): Out | null {
     case Kind.Stadium: return stadium(r);
     case Kind.BusDepot: return busDepot(r);
     case Kind.Metro: return metro();
+    case Kind.TramDepot: return tramDepot(r);
+    case Kind.Monument: return monument(r);
+    case Kind.CityHall: return cityHall(r);
+    case Kind.Ferris: return ferris(r);
+    case Kind.TvTower: return tvTower();
+    case Kind.Harbour: return harbour(r);
+    case Kind.Cathedral: return cathedral();
+    case Kind.Airport: return airport(r);
+    case Kind.Opera: return opera(r);
+    case Kind.Spire: return spire();
+    case Kind.Space: return space(r);
     default: return null;
   }
 }

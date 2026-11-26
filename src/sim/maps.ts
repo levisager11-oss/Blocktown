@@ -74,7 +74,7 @@ export class Maps {
       else if (def.cat === "health") this.splat(d.health, lot.x, lot.z, reach, power, true);
       else if (def.kind === Kind.School) this.splat(d.school, lot.x, lot.z, reach, power, true);
       else if (def.kind === Kind.HighSchool || def.kind === Kind.University) this.splat(d.high, lot.x, lot.z, reach, power, true);
-      else if (def.cat === "parks") this.splat(d.charm, lot.x, lot.z, reach, (def.charm ?? 0.5) * power, true);
+      else if (def.cat === "parks" || (def.cat === "landmark" && def.charm)) this.splat(d.charm, lot.x, lot.z, reach, (def.charm ?? 0.5) * power, true);
     }
 
     // Busy roads are loud.

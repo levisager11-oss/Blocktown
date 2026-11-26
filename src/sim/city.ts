@@ -1,7 +1,7 @@
 // One city: its land, roads, plots, money and everything the player can do to it.
 import {
   BUDGET_CATS, CAT_UNLOCK, Cat, FEATURE_UNLOCK, HOURS_PER_SECOND, Kind, LOANS, MAP_SIZES, MODE, MapSize, Mode,
-  PLACE_BY_KIND, ROADS, Road, START_MONEY, ZONES, Zone,
+  PLACE_BY_KIND, ROADS, ROUNDABOUT, Road, START_MONEY, ZONES, Zone,
 } from "./defs";
 import { Disasters } from "./disasters";
 import { census, decay, demand, budget, grow, utilities } from "./economy";
@@ -35,6 +35,8 @@ export interface Stats {
   flow: number; riders: number; cars: number;
   rawMake: number[]; rawNeed: number[]; goodsMake: number; goodsNeed: number; exports: number; imports: number;
   quality: number[]; score: number; land: number;
+  /** Visitors from out of town a day, drawn by the landmarks. */
+  tourists: number;
 }
 
 const blankStats = (): Stats => ({
@@ -44,7 +46,7 @@ const blankStats = (): Stats => ({
   students: [0, 0, 0], seats: [0, 0, 0], beds: 0,
   income: {}, expense: {}, net: 0, flow: 1, riders: 0, cars: 0,
   rawMake: [0, 0, 0, 0], rawNeed: [0, 0, 0, 0], goodsMake: 0, goodsNeed: 0, exports: 0, imports: 0,
-  quality: [1, 1, 1, 1], score: 0, land: 0.3,
+  quality: [1, 1, 1, 1], score: 0, land: 0.3, tourists: 0,
 });
 
 export interface Placement { ok: boolean; reason: string; box: Box | null; seg: RSeg | null; s: number; cost: number; clears: Lot[] }
@@ -99,6 +101,12 @@ export class City {
   shops: Lot[] = [];
   factories: Lot[] = [];
   raws: Lot[] = [];
+  /** Landmarks and other sights that draw visitors. */
+  sights: Lot[] = [];
+  /** What the landmarks add, worked out every hour: happiness, taxes, exports, visitors, offices. */
+  bonus = { happy: 0, tax: 0, trade: 0, visitors: 0, offices: 0 };
+  /** The middles of roundabouts, for the green island drawn there. */
+  rings: { x: number; z: number; r: number }[] = [];
   rising = new Set<Lot>();
   onAchievement: (id: string) => void = () => {};
   onScore: (board: string, value: number) => void = () => {};
@@ -143,7 +151,7 @@ export class City {
     const plan: RoadPlan = {
       ok: true, reason: "", cost: 0, type, px: [], pz: [], py: [],
       len: 0, curve: [a[0], a[1], c[0], c[1], b[0], b[1]],
-      stops: [{ t: 0, x: a[0], z: a[1], node: startNode }, { t: 1, x: b[0], z: b[1] }],
+      stops: [{ t: 0, x: a[0], z: a[1], node: startNode }, { t: 1, x: b[0], z: b[1] }], tunnel: false, deep: [],
     };
     let px = a[0], pz = a[1];
     for (let i = 1; i <= 40; i++) {
@@ -258,13 +266,16 @@ export class City {
 
   // ------------------------------------------------------------------ roads
 
-  planRoad(a: Anchor, b: Anchor, ctrl: { x: number; z: number } | null, type: Road): RoadPlan & { hits: Lot[] } {
-    const plan = this.roads.plan(a, b, ctrl, type) as RoadPlan & { hits: Lot[] };
+  planRoad(a: Anchor, b: Anchor, ctrl: { x: number; z: number } | null, type: Road, tunnel = false): RoadPlan & { hits: Lot[] } {
+    const plan = this.roads.plan(a, b, ctrl, type, tunnel) as RoadPlan & { hits: Lot[] };
     plan.hits = [];
     if (!plan.ok) return plan;
-    plan.hits = this.lots.under(plan.px, plan.pz, ROADS[type].width / 2);
+    // Only what stands on the land the road runs over; a tunnel passes under.
+    const keep = (_: number, i: number) => !plan.deep[i];
+    plan.hits = this.lots.under(plan.px.filter(keep), plan.pz.filter(keep), ROADS[type].width / 2);
     if (plan.hits.some((l) => l.custom)) { plan.ok = false; plan.reason = "building"; }
-    else if (!this.unlocked(ROADS[type].unlock)) { plan.ok = false; plan.reason = "locked"; }
+    else if (!this.unlocked(ROADS[type].unlock) || ROADS[type].hidden) { plan.ok = false; plan.reason = "locked"; }
+    else if (tunnel && !this.unlocked(FEATURE_UNLOCK.tunnel)) { plan.ok = false; plan.reason = "locked"; }
     else if (!this.canAfford(plan.cost)) { plan.ok = false; plan.reason = "money"; }
     return plan;
   }
@@ -279,7 +290,50 @@ export class City {
     const c = plan.curve;
     const bend = Math.hypot(c[2] - (c[0] + c[4]) / 2, c[3] - (c[1] + c[5]) / 2);
     if (bend > 6) this.bump("curves");
-    if (made.some((s) => s.bridgeLen > 10)) this.bump("bridges");
+    if (made.some((s) => s.bridgeLen > 10 && !s.tunnel)) this.bump("bridges");
+    if (plan.tunnel) this.bump("tunnels");
+    if (ROADS[plan.type].oneway) this.bump("oneways");
+    return true;
+  }
+
+  /** What a roundabout at a crossing would cost, or why it can't be built there. */
+  roundaboutCost(nodeId: number): { cost: number; reason: string } {
+    const node = this.roads.nodes.get(nodeId);
+    const cost = ROUNDABOUT.cost;
+    if (!node || node.outside) return { cost, reason: "fixed" };
+    if (!this.unlocked(ROUNDABOUT.unlock)) return { cost, reason: "locked" };
+    if (node.segs.length < 3) return { cost, reason: "ringSpokes" };
+    if (node.segs.some((id) => this.roads.segs.get(id)?.type === Road.Ring)) return { cost, reason: "ringSpokes" };
+    const r = ROUNDABOUT.radius;
+    const near = this.lots.near(node.x, node.z, r + 5).filter((l) => l.custom);
+    if (near.length) return { cost, reason: "building" };
+    if (!this.canAfford(cost)) return { cost, reason: "money" };
+    return { cost, reason: "" };
+  }
+
+  /** Turns a crossing into a roundabout. Returns "" or why not. */
+  buildRoundabout(nodeId: number): string {
+    const check = this.roundaboutCost(nodeId);
+    if (check.reason) return check.reason;
+    const node = this.roads.nodes.get(nodeId)!;
+    const x = node.x, z = node.z, r = ROUNDABOUT.radius;
+    const around = this.roads.grid.query(x - 60, z - 60, x + 60, z + 60);
+    const res = this.roads.roundabout(nodeId, r);
+    if (typeof res === "string") return res;
+    this.spend(check.cost);
+    // Plots inside the ring go.
+    for (const lot of this.lots.near(x, z, r + 4)) if (!lot.custom) this.lots.remove(lot);
+    this.rings.push({ x, z, r });
+    this.afterRoadChange([...res.made, ...res.cut, ...around.filter((s) => this.roads.segs.has(s.id))]);
+    this.bump("roundabouts");
+    return "";
+  }
+
+  /** Turns a one-way road round. */
+  reverseRoad(seg: RSeg): boolean {
+    if (seg.fixed || !ROADS[seg.type].oneway || seg.type === Road.Ring) return false;
+    this.roads.reverse(seg);
+    this.afterRoadChange([seg]);
     return true;
   }
 
@@ -297,6 +351,8 @@ export class City {
       }
     }
     for (const seg of segs) if (this.roads.segs.has(seg.id)) this.lots.generateFor(seg);
+    // Roundabouts whose ring was torn down lose their island.
+    this.rings = this.rings.filter((g) => this.roads.grid.query(g.x - g.r - 2, g.z - g.r - 2, g.x + g.r + 2, g.z + g.r + 2).some((s) => s.type === Road.Ring));
     this.maps.dirty = true;
     this.zoneVersion++;
     this.look++;
@@ -324,6 +380,7 @@ export class City {
   upgradeRoad(seg: RSeg, type: Road): string {
     if (seg.fixed) return "fixed";
     if (seg.type === type) return "same";
+    if (seg.type === Road.Ring || ROADS[type].hidden) return "fixed";
     if (!this.unlocked(ROADS[type].unlock)) return "locked";
     if (!ROADS[type].zones) {
       const hits = this.lots.grid.query(seg.x0 - 30, seg.z0 - 30, seg.x1 + 30, seg.z1 + 30).filter((l) => l.seg === seg.id);
@@ -398,6 +455,7 @@ export class City {
     const clears = this.lots.overlapping(box, 0.1);
     out.clears = clears;
     if (!this.unlocked(def.unlock)) out.reason = "locked";
+    else if (def.unique && this.has(kind)) out.reason = "unique";
     else if (land) out.reason = land;
     else if (this.terrain.heightAt(p.x, p.z) < 0.9) out.reason = "water";
     else if (!this.roads.clearOf(box, 1)) out.reason = "tooClose";
@@ -426,6 +484,12 @@ export class City {
     this.bump("placed");
     this.bump("placed" + kind);
     return lot;
+  }
+
+  /** Does the city have a building of this kind (one that is still standing)? */
+  has(kind: Kind): boolean {
+    for (const lot of this.lots.lots.values()) if (lot.kind === kind) return true;
+    return false;
   }
 
   /** Tears down what stands on a plot. A building placed by hand goes with its plot; a zoned one may grow back. */

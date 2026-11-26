@@ -3,6 +3,7 @@ import * as THREE from "three";
 import type { City } from "../sim/city";
 import type { Lot } from "../sim/lots";
 import { clamp, lerp, smoothstep } from "../sim/util";
+import { Animations } from "./anim";
 import { Cars, Flames, Sky } from "./fx";
 import { Land } from "./land";
 import { LotsMesh } from "./lotsMesh";
@@ -37,9 +38,12 @@ export class View {
   private land: Land | null = null;
   private roads = new RoadsMesh();
   private lots = new LotsMesh();
+  /** Called when a building is finished. */
+  set onFinished(fn: (lot: Lot) => void) { this.lots.onFinished = fn; }
   private cars: Cars;
   private sky: Sky;
   private flames = new Flames();
+  private anims = new Animations();
   private info: InfoLayer | null = null;
   private world = new THREE.Group();
   private ray = new THREE.Raycaster();
@@ -60,7 +64,7 @@ export class View {
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.7;
-    this.world.add(this.roads.group, this.lots.group, this.cars.mesh, this.sky.points, this.flames.mesh, this.preview.group);
+    this.world.add(this.roads.group, this.lots.group, this.cars.mesh, this.sky.points, this.flames.mesh, this.anims.group, this.preview.group);
     this.setQuality(phone ? "low" : "medium");
   }
 
@@ -84,6 +88,7 @@ export class View {
     this.info = new InfoLayer(city, this.land.mesh.geometry);
     this.world.add(this.land.group, this.info.mesh);
     this.lots.refresh();
+    this.anims.clear();
     if (!keepCamera) {
       const s = city.terrain.size;
       this.cam = { x: s / 2, z: s / 2, dist: s * 0.75, yaw: 0.6, pitch: 0.85 };
@@ -182,6 +187,7 @@ export class View {
     this.lots.update(city, this.night, this.showEmpty, dt);
     this.cars.update(city, this.night);
     this.flames.update(city, dt, this.lots.heights);
+    this.anims.update(city, dt);
     const W = city.weather;
     const spread = clamp(this.cam.dist * 1.6, 160, 1500);
     this.sky.update(dt, W.rain, W.snowing, W.wind, this.cam.x, this.targetY, this.cam.z, spread);

@@ -1,13 +1,45 @@
 // A page for looking at the view while developing: builds a test town and shows it.
-import { Kind } from "./sim/defs";
+import { Kind, Road } from "./sim/defs";
 import { View } from "./render/view";
 import { Bot } from "../tests/bot";
-import { addWater, buildTown, newCity, placeNear, run, zoneAll } from "../tests/helpers";
+import { addWater, buildTown, newCity, placeNear, road, run, startSpot, zoneAll } from "../tests/helpers";
 
 const q = new URLSearchParams(location.search);
 const city = newCity({ seed: Number(q.get("seed") ?? 7), mode: (q.get("mode") as "chill") ?? "chill", size: (q.get("size") as "small") ?? "small" });
 let origin = { x: 0, z: 0 };
-if (q.get("bot")) {
+if (q.get("roads")) {
+  // The new roads side by side: avenues with lights, a roundabout, one-way streets, a tram line.
+  const s = startSpot(city, 300);
+  const ux = -s.dz, uz = s.dx, vx = s.dx, vz = s.dz;
+  const P = (u: number, v: number) => ({ x: s.x + ux * u + vx * v, z: s.z + uz * u + vz * v });
+  const R = (a: number[], b: number[], t: Road) => { const p = P(a[0], a[1]), e = P(b[0], b[1]); return road(city, p.x, p.z, e.x, e.z, t); };
+  R([0, 0], [40, 0], Road.Avenue);
+  R([40, -120], [40, 120], Road.Avenue);
+  R([40, 0], [200, 0], Road.Avenue);
+  R([120, -120], [120, 120], Road.TramAvenue);
+  R([200, -120], [200, 120], Road.Street);
+  R([40, -120], [200, -120], Road.OneWay);
+  R([200, 120], [40, 120], Road.OneWay);
+  R([40, 60], [200, 60], Road.Street);
+  const node = city.roads.nearestNode(P(200, 60).x, P(200, 60).z, 10);
+  if (node) city.buildRoundabout(node.id);
+  zoneAll(city);
+  placeNear(city, Kind.Coal, P(0, 60).x, P(0, 60).z);
+  placeNear(city, Kind.TramDepot, P(140, 90).x, P(140, 90).z);
+  run(city, 1);
+  const tram = [...city.roads.segs.values()].filter((g) => g.type === Road.TramAvenue);
+  if (tram.length > 1) city.transit.addLine(false, [tram[0], tram[tram.length - 1]].map((g) => ({ x: g.px[2], z: g.pz[2], seg: g.id, s: g.cum[2] })), true);
+  run(city, Number(q.get("days") ?? 3));
+  origin = P(120, 0);
+} else if (q.get("gallery")) {
+  // Every landmark next to a small town, to look at the models.
+  origin = buildTown(city, 4, 4).origin;
+  zoneAll(city);
+  const kinds = [Kind.Monument, Kind.CityHall, Kind.Ferris, Kind.TvTower, Kind.Cathedral, Kind.Opera, Kind.Spire, Kind.TramDepot, Kind.Harbour, Kind.Airport, Kind.Space];
+  kinds.forEach((k, i) => placeNear(city, k, origin.x + 60 + (i % 4) * 70, origin.z + 40 + Math.floor(i / 4) * 80));
+  placeNear(city, Kind.Coal, origin.x, origin.z);
+  run(city, Number(q.get("days") ?? 2));
+} else if (q.get("bot")) {
   // Let the automatic mayor grow a city for a while.
   const bot = new Bot(city);
   bot.play(Number(q.get("bot")));

@@ -3,6 +3,7 @@ import "./ui/style.css";
 import { Sfx, Sound } from "./audio/sound";
 import { Controls } from "./input/controls";
 import { ToolHost, Tools } from "./input/tools";
+import { Thumbs } from "./render/thumbs";
 import { View } from "./render/view";
 import { City, CityOptions, Tone } from "./sim/city";
 import type { MapSize } from "./sim/defs";
@@ -18,7 +19,7 @@ const SETTINGS_KEY = "blocktown.settings";
 const phone = matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 600;
 
 function loadSettings(): Settings {
-  const base: Settings = { lang: browserLang(), sfx: 0.7, ambience: 0.5, quality: phone ? "low" : "medium", dayNight: true, advisor: true, pad: phone };
+  const base: Settings = { lang: browserLang(), sfx: 0.7, ambience: 0.5, quality: phone ? "low" : "medium", dayNight: true, advisor: true, pad: false, saver: phone };
   try { return { ...base, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Partial<Settings>) }; } catch { return base; }
 }
 
@@ -31,7 +32,10 @@ class Game implements GameApi, ToolHost, MenuHost {
   menu: Menu;
   controls: Controls;
   audio = new Sound();
+  thumbs: Thumbs;
   speed = 1;
+  /** Is the player using a finger right now (rather than a mouse)? */
+  touch = phone;
   /** The save slot of the city being played; 0 while only the backdrop of the menu is shown. */
   slot = 0;
   private last = performance.now();
@@ -40,11 +44,13 @@ class Game implements GameApi, ToolHost, MenuHost {
   private soundClock = 0;
   private thunder = 6;
   private applied = "";
+  private skip = 0;
 
   constructor() {
     setLang(this.settings.lang);
     const canvas = document.getElementById("view") as HTMLCanvasElement;
     this.view = new View(canvas, phone);
+    this.thumbs = new Thumbs(this.view.renderer);
     this.city = this.backdrop(Math.floor(Math.random() * 900000) + 100000, "small");
     this.tools = new Tools(this);
     this.ui = new UI(this);
@@ -61,7 +67,12 @@ class Game implements GameApi, ToolHost, MenuHost {
       if (document.hidden) { this.saveNow(true); this.audio.suspend(); } else { this.audio.resume(); this.last = performance.now(); }
     });
     window.addEventListener("pagehide", () => this.saveNow(true));
-    document.addEventListener("pointerdown", () => this.audio.unlock(), { capture: true });
+    document.addEventListener("pointerdown", (e) => {
+      this.audio.unlock();
+      const touch = e.pointerType !== "mouse";
+      if (touch !== this.touch) { this.touch = touch; this.tools.refresh(); this.ui.refreshTools(); }
+    }, { capture: true });
+    this.view.onFinished = (lot) => { if (this.playing) { this.ui.finished(lot); if (Math.random() < 0.35) this.sound("grow"); } };
     this.ui.setVisible(false);
     this.menu.show("main");
     requestAnimationFrame((now) => this.loop(now));
@@ -82,7 +93,7 @@ class Game implements GameApi, ToolHost, MenuHost {
       this.sound("achievement");
       if (!insideToki) {
         const a = achievementInfo(id, this.settings.lang);
-        this.ui.toast("ach.toast", "good", { name: a.name });
+        this.ui.achievement(a.name, a.icon);
       }
     };
     city.onScore = (board, value) => sendScore(board, value);
@@ -158,6 +169,7 @@ class Game implements GameApi, ToolHost, MenuHost {
   private escape() {
     if (this.ui.modalOpen) { this.ui.closeModal(); return; }
     if (this.ui.panels.current) { this.ui.panels.close(); return; }
+    if (this.ui.closeMenus()) return;
     if (this.menu.open) { if (this.playing) this.resume(); return; }
     if (!this.tools.cancel()) this.openMenu();
   }
@@ -168,7 +180,8 @@ class Game implements GameApi, ToolHost, MenuHost {
     else if (k === "1") this.setSpeed(1);
     else if (k === "2") this.setSpeed(2);
     else if (k === "3") this.setSpeed(4);
-    else if (k === "b") this.ui.pickCat("bulldoze");
+    else if (k === "b") this.tools.set({ t: "bulldoze" });
+    else if (k === "Enter") this.tools.yes();
   }
 
   // ------------------------------------------------------------------ what the tools and the interface ask for
@@ -180,6 +193,7 @@ class Game implements GameApi, ToolHost, MenuHost {
   confirm(key: string, args: Record<string, string | number>, yes: () => void) { this.ui.confirm(key, args, yes); }
   hintChanged() { this.ui?.hintChanged(); }
   toolChanged() { this.ui?.toolChanged(); }
+  spent(cost: number, at: { x: number; y: number; z: number }) { this.ui.spent(cost, at); }
 
   saveSettings() {
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings)); } catch { /* storage is off */ }
@@ -246,10 +260,15 @@ class Game implements GameApi, ToolHost, MenuHost {
   }
 
   private loop(now: number) {
+    // Saving the battery: at most 30 pictures a second.
+    if (this.settings.saver && now - this.last < 1000 / 31) {
+      requestAnimationFrame((n) => this.loop(n));
+      return;
+    }
     const dt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
     const inMenu = this.menu.open;
-    const paused = inMenu || this.ui.modalOpen;
+    const paused = inMenu || this.ui.modalOpen || this.ui.popupOpen;
     if (!paused && this.playing && this.speed > 0) this.city.step(dt * this.speed);
     if (inMenu && !this.playing) this.view.goal.yaw += dt * 0.05; // the backdrop turns slowly
     this.controls.frame(dt);
