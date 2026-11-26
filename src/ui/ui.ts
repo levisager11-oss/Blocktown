@@ -526,16 +526,13 @@ export class UI {
     this.refreshTools();
   }
 
-  /** An achievement (shown only outside Toki, which shows its own). */
+  /** An achievement (shown only outside Toki, which shows its own): a gold banner that doesn't stop the game. */
   achievement(name: string, ic: string) {
-    this.show(() => {
-      this.game.sound("achievement");
-      return h("div", { class: "prize" },
-        h("div", { class: "ribbon" }, t("ach.title")),
-        h("div", { class: "big" }, h("span", { style: { fontSize: "64px", lineHeight: "1" } }, ic)),
-        h("h2", null, name),
-        h("button", { class: "btn green", onclick: () => { this.game.sound("click"); this.closePopup(); } }, t("ms.great")));
-    });
+    this.game.sound("achievement");
+    const el = h("div", { class: "toast ach" }, h("span", { class: "medal" }, ic), h("span", null, h("small", null, t("ach.title")), h("b", null, name)));
+    this.toasts.prepend(el);
+    setTimeout(() => el.classList.add("out"), 5000);
+    setTimeout(() => el.remove(), 5500);
   }
 
   /** Shows a big moment over the game, one at a time, with confetti. */

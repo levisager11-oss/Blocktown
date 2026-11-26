@@ -1071,9 +1071,9 @@ function opera(r: Rand): Out {
   patch(o, 0, 0, 43, 35, 0xd9d4c7);
   box(o, 0, 0, -4, 34, 4, 24, 0xc9b79c);
   // three white shells
-  dome(o, -9, 4, -4, 14, 14, 20, 0xf5f6f4);
-  dome(o, 3, 4, -6, 12, 11, 17, 0xf2f2ee);
-  dome(o, 12, 4, -2, 9, 8, 12, 0xf5f6f4);
+  dome(o, -9, 4, -4, 14, 9, 20, 0xf5f6f4);
+  dome(o, 3, 4, -6, 12, 7.5, 17, 0xf2f2ee);
+  dome(o, 12, 4, -2, 9, 5.5, 12, 0xf5f6f4);
   // the glass foyer
   win(o, 0, 0, 10, 28, 7, 6, 0xb8d4e6);
   box(o, 0, 7, 10, 29, 0.6, 7, 0xe9ecef);

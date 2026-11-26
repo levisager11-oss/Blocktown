@@ -1,5 +1,5 @@
 // Milestones, the city score, the high-score lists and the achievements.
-import { Kind, MILESTONES, MILESTONE_REWARD, YEAR_DAYS, Zone } from "./defs";
+import { Kind, MILESTONES, MILESTONE_REWARD, PLACE, YEAR_DAYS, Zone } from "./defs";
 import type { City } from "./city";
 
 export interface Achievement { id: string; icon: string; chill?: boolean; test: (c: City) => boolean }
@@ -35,6 +35,9 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "hard-10k", icon: "🔥", test: (c) => c.mode === "hard" && c.stats.pop >= 10000 },
   { id: "year", icon: "📅", test: (c) => c.day >= YEAR_DAYS && c.stats.pop >= 500 },
   { id: "skyline", icon: "🏢", test: (c) => (c.count.towers ?? 0) >= 50 },
+  { id: "landmark", icon: "🏛️", chill: true, test: (c) => PLACE.some((p) => p.cat === "landmark" && (c.count["placed" + p.kind] ?? 0) > 0) },
+  { id: "roundabout", icon: "🔄", chill: true, test: (c) => (c.count.roundabouts ?? 0) >= 1 },
+  { id: "tourists", icon: "📸", test: (c) => c.stats.tourists >= 1500 },
 ];
 
 /** The city score: citizens, with a bonus for happiness, flowing traffic and good schools. */
