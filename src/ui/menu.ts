@@ -5,6 +5,7 @@ import { SlotInfo, freeSlot, listSlots } from "../sim/save";
 import { seedFromText } from "../sim/util";
 import { fill, h } from "./dom";
 import { num, t } from "./i18n";
+import { IconName, icon } from "./icons";
 
 export interface MenuHost {
   /** Is a real city (not just the backdrop) loaded? */
@@ -21,7 +22,7 @@ export interface MenuHost {
 }
 
 const NAMES = ["Brookfield", "Maple Bay", "Stonebridge", "Lindenau", "Sonnental", "Riverton", "Pinecrest", "Kieselbach", "Oakhaven", "Windmere", "Blockheim", "Silverlake", "Falkenried", "Ambergate", "Rosenau", "Northpoint"];
-const MODE_ICON: Record<Mode, string> = { chill: "🌴", normal: "🏙️", hard: "🔥" };
+const MODE_ICON: Record<Mode, IconName> = { chill: "palm", normal: "buildings", hard: "flame" };
 
 export class Menu {
   el = h("div", { class: "menu hidden" });
@@ -39,8 +40,9 @@ export class Menu {
   hide() { this.el.classList.add("hidden"); }
   redraw() { if (this.open) this.draw(); }
 
-  private button(label: string, act: () => void, cls = ""): HTMLElement {
-    return h("button", { class: "menu-btn-big " + cls, onclick: () => { this.host.click(); act(); } }, label);
+  private button(label: string, act: () => void, cls = "", ico?: IconName): HTMLElement {
+    return h("button", { class: "menu-btn-big " + cls, onclick: () => { this.host.click(); act(); } },
+      ico ? icon(ico, "mi") : null, h("span", { class: "ml" }, label));
   }
 
   private draw() {
@@ -49,19 +51,19 @@ export class Menu {
     const host = this.host, slots = listSlots().sort((a, b) => b.savedAt - a.savedAt);
     const items: HTMLElement[] = [];
     if (host.playing) {
-      items.push(this.button(t("menu.resume"), () => host.resume(), "primary"));
-      items.push(this.button(t("menu.save"), () => host.save()));
+      items.push(this.button(t("menu.resume"), () => host.resume(), "primary hero", "play"));
+      items.push(this.button(t("menu.save"), () => host.save(), "", "save"));
     } else if (slots.length) {
-      items.push(this.button(`${t("menu.continue")}: ${slots[0].name}`, () => host.load(slots[0].slot), "primary"));
+      items.push(this.button(`${t("menu.continue")}: ${slots[0].name}`, () => host.load(slots[0].slot), "primary hero", "play"));
     }
-    items.push(this.button(t("menu.new"), () => this.startDraft(), !host.playing && !slots.length ? "primary" : ""));
-    if (slots.length) items.push(this.button(t("menu.load"), () => this.show("load")));
-    items.push(this.button(t("menu.options"), () => host.openPanel("options")));
-    items.push(this.button(t("menu.help"), () => host.openPanel("help")));
-    if (document.fullscreenEnabled) items.push(this.button(t("menu.fullscreen"), () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen().catch(() => {}); }));
-    fill(this.el, h("div", { class: "menu-card" },
-      h("div", { class: "logo" }, h("span", { class: "blocks" }, h("i"), h("i"), h("i")), h("h1", null, t("game.name")), h("p", null, t("game.tagline"))),
-      ...items));
+    items.push(this.button(t("menu.new"), () => this.startDraft(), !host.playing && !slots.length ? "primary hero" : "", "plus"));
+    if (slots.length) items.push(this.button(t("menu.load"), () => this.show("load"), "", "folder"));
+    items.push(this.button(t("menu.options"), () => host.openPanel("options"), "", "settings"));
+    items.push(this.button(t("menu.help"), () => host.openPanel("help"), "", "book"));
+    if (document.fullscreenEnabled) items.push(this.button(t("menu.fullscreen"), () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen().catch(() => {}); }, "", "maximize"));
+    fill(this.el, h("div", { class: "menu-card main" },
+      h("div", { class: "logo" }, h("span", { class: "blocks" }, h("i"), h("i"), h("i")), h("div", null, h("h1", null, t("game.name")), h("p", null, t("game.tagline")))),
+      h("div", { class: "menu-list" }, ...items)));
   }
 
   private startDraft() {
@@ -79,16 +81,19 @@ export class Menu {
     seed.addEventListener("change", () => { d.seed = seedFromText(seed.value || "0"); host.preview(d.seed, d.size); });
     const pick = <T extends string>(options: T[], current: T, label: (o: T) => HTMLElement | string, set: (o: T) => void, cls: string) =>
       h("div", { class: "pick " + cls }, ...options.map((o) => h("button", { class: o === current ? "on" : "", onclick: () => { host.click(); set(o); this.draw(); } }, label(o))));
-    fill(this.el, h("div", { class: "menu-card wide" },
+    fill(this.el, h("div", { class: "menu-card wide new" },
       h("h2", null, t("new.title")),
-      h("label", { class: "field" }, h("span", null, t("new.name")), name),
-      h("div", { class: "field" }, h("span", null, t("new.mode")),
-        pick<Mode>(["chill", "normal", "hard"], d.mode, (m) => h("span", null, h("b", null, MODE_ICON[m] + " " + t("mode." + m)), h("small", null, t("mode." + m + ".d"))), (m) => { d.mode = m; }, "modes")),
-      h("div", { class: "field" }, h("span", null, t("new.size")),
-        pick<MapSize>(["small", "medium", "large"], d.size, (s) => t("size." + s), (s) => { d.size = s; host.preview(d.seed, d.size); }, "sizes")),
-      h("label", { class: "field" }, h("span", null, t("new.seed")),
-        h("div", { class: "seed" }, seed, h("button", { onclick: () => { host.click(); d.seed = Math.floor(Math.random() * 900000) + 100000; host.preview(d.seed, d.size); this.draw(); } }, "🎲 " + t("new.roll"))),
-        h("small", null, t("new.seedHint"))),
+      h("div", { class: "cols" },
+        h("div", { class: "col" },
+          h("label", { class: "field" }, h("span", null, t("new.name")), name),
+          h("div", { class: "field" }, h("span", null, t("new.size")),
+            pick<MapSize>(["small", "medium", "large"], d.size, (s) => t("size." + s), (s) => { d.size = s; host.preview(d.seed, d.size); }, "sizes")),
+          h("label", { class: "field" }, h("span", null, t("new.seed")),
+            h("div", { class: "seed" }, seed, h("button", { onclick: () => { host.click(); d.seed = Math.floor(Math.random() * 900000) + 100000; host.preview(d.seed, d.size); this.draw(); } }, icon("dice"), t("new.roll"))),
+            h("small", null, t("new.seedHint")))),
+        h("div", { class: "col" },
+          h("div", { class: "field" }, h("span", null, t("new.mode")),
+            pick<Mode>(["chill", "normal", "hard"], d.mode, (m) => h("span", null, h("b", null, icon(MODE_ICON[m], "mode-ic"), t("mode." + m)), h("small", null, t("mode." + m + ".d"))), (m) => { d.mode = m; }, "modes")))),
       h("div", { class: "row" },
         this.button(t("new.start"), () => host.startNew({ name: d.name.trim() || NAMES[0], mode: d.mode, size: d.size, seed: d.seed }), "primary"),
         this.button(t("ui.back"), () => this.show("main")))));
@@ -99,7 +104,7 @@ export class Menu {
     const card = (s: SlotInfo) => h("div", { class: "slot" },
       h("div", null, h("b", null, s.name), h("small", null, t("load.info", { pop: num(s.pop), day: s.day + 1, mode: t("mode." + s.mode) }))),
       h("button", { class: "primary", onclick: () => { host.click(); host.load(s.slot); } }, t("load.play")),
-      h("button", { class: "danger", title: t("load.delete"), onclick: () => host.confirm("confirm.deleteCity", { name: s.name }, () => { host.remove(s.slot); this.draw(); }) }, "🗑️"));
+      h("button", { class: "danger", title: t("load.delete"), "aria-label": t("load.delete"), onclick: () => host.confirm("confirm.deleteCity", { name: s.name }, () => { host.remove(s.slot); this.draw(); }) }, icon("trash")));
     fill(this.el, h("div", { class: "menu-card wide" },
       h("h2", null, t("load.title")),
       ...(slots.length ? slots.map(card) : [h("p", { class: "note" }, t("load.empty"))]),

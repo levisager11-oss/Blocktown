@@ -9,6 +9,7 @@ import type { View } from "../render/view";
 import type { Sfx } from "../audio/sound";
 import { clear, fill, h, setText } from "./dom";
 import { money, num, pct, short, t } from "./i18n";
+import { BUILDING_ICON, CAT_COLOR, IconName, ZONE_ICON, icon, iconSvg, tile } from "./icons";
 import { Panels } from "./panels";
 
 export interface Settings {
@@ -25,31 +26,49 @@ export interface GameApi {
 }
 
 type CatId = "inspect" | "roads" | "zones" | "power" | "water" | "services" | "edu" | "parks" | "transit" | "bulldoze" | "views";
-const CATS: { id: CatId; icon: string; unlock: number }[] = [
-  { id: "inspect", icon: "👆", unlock: 0 }, { id: "roads", icon: "🛣️", unlock: 0 }, { id: "zones", icon: "🏘️", unlock: 0 }, { id: "power", icon: "⚡", unlock: 0 },
-  { id: "water", icon: "💧", unlock: 1 }, { id: "services", icon: "🚑", unlock: 2 }, { id: "edu", icon: "🎓", unlock: 2 }, { id: "parks", icon: "🌳", unlock: 1 },
-  { id: "transit", icon: "🚌", unlock: 4 }, { id: "bulldoze", icon: "🚜", unlock: 0 }, { id: "views", icon: "🗺️", unlock: 0 },
+const CATS: { id: CatId; icon: IconName; unlock: number }[] = [
+  { id: "inspect", icon: "pointer", unlock: 0 }, { id: "roads", icon: "route", unlock: 0 }, { id: "zones", icon: "plot", unlock: 0 }, { id: "power", icon: "zap", unlock: 0 },
+  { id: "water", icon: "drop", unlock: 1 }, { id: "services", icon: "ambulance", unlock: 2 }, { id: "edu", icon: "cap", unlock: 2 }, { id: "parks", icon: "tree", unlock: 1 },
+  { id: "transit", icon: "bus", unlock: 4 }, { id: "bulldoze", icon: "hammer", unlock: 0 }, { id: "views", icon: "layers", unlock: 0 },
 ];
 const CAT_KINDS: Partial<Record<CatId, Cat[]>> = { power: ["power"], water: ["water"], services: ["health", "garbage", "police", "fire"], edu: ["edu"], parks: ["parks"], transit: ["transit"] };
-export const ZONE_ICON = ["✖️", "🏠", "🏢", "🏪", "🏬", "🏭", "💼", "🌾", "🪵", "⛏️", "🛢️"];
 const VIEWS: InfoView[] = ["", "traffic", "value", "pollution", "noise", "police", "fire", "health", "school", "charm", "flood", "soil", "forest", "ore", "oil"];
-const VIEW_ICON: Record<string, string> = { "": "🏙️", traffic: "🚗", value: "💎", pollution: "🏭", noise: "🔊", police: "🚓", fire: "🚒", health: "🩺", school: "🏫", charm: "🌳", flood: "🌊", soil: "🌾", forest: "🌲", ore: "⛏️", oil: "🛢️" };
+const VIEW_ICON: Record<string, IconName> = { "": "buildings", traffic: "car", value: "gem", pollution: "factory", noise: "sound", police: "shield", fire: "flame", health: "health", school: "school", charm: "sparkles", flood: "waves", soil: "wheat", forest: "pine", ore: "pickaxe", oil: "fuel" };
 const VIEW_UNLOCK: Record<string, number> = { police: 3, fire: 3, health: 2, school: 2, charm: 1, flood: 5, soil: 4, forest: 4, ore: 6, oil: 6 };
-const PROBLEM_ICON: Record<string, string> = { noRoad: "🚧", noPower: "⚡", noWater: "💧", sewage: "🚽", abandoned: "🏚️", fire: "🔥", burnt: "💥", flood: "🌊", unhappy: "😠" };
-const SKY_ICON: Record<string, string> = { clear: "☀️", cloudy: "☁️", rain: "🌧️", storm: "⛈️", fog: "🌫️", snow: "🌨️" };
-const SEASON_ICON = ["🌱", "🌻", "🍂", "❄️"];
+const PROBLEM_ICON: Record<string, [IconName, string]> = {
+  noRoad: ["roadwork", "#f08c00"], noPower: ["zapOff", "#e8a400"], noWater: ["drop", "#2f86d6"], sewage: ["toilet", "#8a6d3b"], abandoned: ["ghost", "#6b7280"],
+  fire: ["flame", "#e8432f"], burnt: ["flame", "#4b5563"], flood: ["waves", "#2f86d6"], unhappy: ["frown", "#d6336c"],
+};
+const SKY_ICON: Record<string, IconName> = { clear: "sun", cloudy: "cloud", rain: "rain", storm: "storm", fog: "fog", snow: "snow" };
+const SEASON_ICON: IconName[] = ["sprout", "flower", "leaf", "snowflake"];
+const VIEW_COLOR = "#5aa9ff";
+/** Puts an icon into an element, only when it is a different one. */
+function setIcon(el: HTMLElement, name: IconName) {
+  if (el.dataset.i === name) return;
+  el.dataset.i = name;
+  el.innerHTML = iconSvg(name);
+}
+const svg = (body: string) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">${body}</svg>`;
+const MENU_ICON = svg('<rect x="4" y="6" width="16" height="2.4" rx="1.2"/><rect x="4" y="10.8" width="16" height="2.4" rx="1.2"/><rect x="4" y="15.6" width="16" height="2.4" rx="1.2"/>');
+const SPEED_ICON = [
+  svg('<rect x="6.5" y="5" width="4" height="14" rx="1.3"/><rect x="13.5" y="5" width="4" height="14" rx="1.3"/>'),
+  svg('<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/>'),
+  svg('<path d="M3 6.2v11.6a.9.9 0 0 0 1.4.75L12 13.2v4.6a.9.9 0 0 0 1.4.75l8.3-5.8a.9.9 0 0 0 0-1.5l-8.3-5.8A.9.9 0 0 0 12 6.2v4.6L4.4 5.45A.9.9 0 0 0 3 6.2z"/>'),
+  svg('<path d="M1 7v10a.8.8 0 0 0 1.25.66L8 13.4v3.6a.8.8 0 0 0 1.25.66L15 13.4v3.6a.8.8 0 0 0 1.25.66l6.4-5a.8.8 0 0 0 0-1.32l-6.4-5A.8.8 0 0 0 15 7v3.6L9.25 6.34A.8.8 0 0 0 8 7v3.6L2.25 6.34A.8.8 0 0 0 1 7z"/>'),
+];
 
 export const milestoneName = (n: number) => t("ms." + n);
 
 export class UI {
   root: HTMLElement;
   panels: Panels;
-  private hud = { pop: h("b"), money: h("b"), net: h("small"), happy: h("b"), happyIcon: h("span"), traffic: h("b"), title: h("b"), rank: h("span"), clock: h("span"), date: h("span", { class: "long" }), sky: h("span") };
+  private hud = { pop: h("b"), money: h("b"), net: h("small"), happy: h("b"), happyIcon: h("span"), traffic: h("b"), title: h("b"), rank: h("span"), clock: h("span"), date: h("span", { class: "long" }), sky: h("span"), season: h("span") };
   private bars: HTMLElement[] = [];
   private speedButtons: HTMLElement[] = [];
   private toolbar = h("div", { class: "toolbar" });
   private tray = h("div", { class: "tray" });
   private trayDesc = h("div", { class: "tray-desc" });
+  private tip = h("div", { class: "tip" });
   private hint = h("div", { class: "hint" });
   private toasts = h("div", { class: "toasts" });
   private advisor = h("div", { class: "advisor" });
@@ -60,6 +79,7 @@ export class UI {
   private advice = "";
   private adviceSeen = "";
   private adviceOpen = true;
+  private adviceTimer = 0;
   private markerLots: Lot[] = [];
   private markerEls: HTMLElement[] = [];
   private slow = 0;
@@ -72,36 +92,51 @@ export class UI {
     this.root = document.getElementById("ui")!;
     this.panels = new Panels(this);
     clear(this.root);
-    const chip = (cls: string, icon: string | HTMLElement, value: HTMLElement, extra: HTMLElement | null, title: string, click: () => void) =>
-      h("button", { class: "chip " + cls, title: t(title), onclick: () => { game.sound("click"); click(); } }, typeof icon === "string" ? h("span", { class: "ico" }, icon) : icon, value, extra);
-    const demand = h("button", { class: "demand", title: t("hud.demand"), onclick: () => this.panels.toggle("city") },
+    const stat = (cls: string, ico: string | HTMLElement, value: HTMLElement, extra: HTMLElement | null, title: string, click: () => void) =>
+      h("button", { class: "stat " + cls, title: t(title), "aria-label": t(title), onclick: () => { game.sound("click"); click(); } }, typeof ico === "string" ? icon(ico as IconName, "ico") : ico, value, extra);
+    const demand = h("button", { class: "stat demand", title: t("hud.demand"), "aria-label": t("hud.demand"), onclick: () => this.panels.toggle("city") },
       ...(["r", "c", "i", "o"] as const).map((k) => {
         const bar = h("i");
         this.bars.push(bar);
-        return h("span", { class: "bar " + k }, bar, h("em", null, t("hud." + k).charAt(0)));
+        return h("span", { class: "bar " + k, title: t("hud." + k) }, h("span", { class: "well" }, bar), h("em", null, t("hud." + k).charAt(0)));
       }));
-    this.hud.happyIcon.className = "ico";
+    this.hud.happyIcon.className = "ic ico";
+    this.hud.sky.className = "ic sky";
+    this.hud.season.className = "ic season";
     const speeds = h("div", { class: "speeds" }, ...[0, 1, 2, 4].map((s, i) => {
-      const b = h("button", { title: s ? t("ui.speed", { n: i }) : t("ui.pause"), onclick: () => { game.setSpeed(s); game.sound("click"); } }, s === 0 ? "⏸" : "▶".repeat(i));
+      const b = h("button", { title: s ? t("ui.speed", { n: i }) : t("ui.pause"), "aria-label": s ? t("ui.speed", { n: i }) : t("ui.pause"), html: SPEED_ICON[i], onclick: () => { game.setSpeed(s); game.sound("click"); } });
       this.speedButtons.push(b);
       return b;
     }));
     const top = h("div", { class: "hud" },
-      h("button", { class: "menu-btn", title: t("ui.menu"), onclick: () => game.openMenu() }, "☰"),
-      h("button", { class: "city-name", onclick: () => this.panels.toggle("city") }, this.hud.title, this.hud.rank),
-      h("div", { class: "chips" },
-        chip("pop", "👥", this.hud.pop, null, "hud.pop", () => this.panels.toggle("city")),
-        chip("money", "🪙", this.hud.money, this.hud.net, "hud.money", () => this.panels.toggle("budget")),
-        chip("happy", this.hud.happyIcon, this.hud.happy, null, "hud.happy", () => this.panels.toggle("city")),
-        chip("traffic", "🚗", this.hud.traffic, null, "hud.traffic", () => this.setView(game.view.infoView === "traffic" ? "" : "traffic")),
+      h("div", { class: "pill brand" },
+        h("button", { class: "menu-btn", title: t("ui.menu"), "aria-label": t("ui.menu"), html: MENU_ICON, onclick: () => game.openMenu() }),
+        h("button", { class: "city-name", onclick: () => this.panels.toggle("city") }, this.hud.title, this.hud.rank)),
+      h("div", { class: "pill stats" },
+        stat("pop", "users", this.hud.pop, null, "hud.pop", () => this.panels.toggle("city")),
+        stat("money", "coins", this.hud.money, this.hud.net, "hud.money", () => this.panels.toggle("budget")),
+        stat("happy", this.hud.happyIcon, this.hud.happy, null, "hud.happy", () => this.panels.toggle("city")),
+        stat("traffic", "car", this.hud.traffic, null, "hud.traffic", () => this.setView(game.view.infoView === "traffic" ? "" : "traffic")),
         demand),
-      h("div", { class: "clock" }, this.hud.sky, this.hud.date, this.hud.clock),
-      speeds);
+      h("div", { class: "pill time" }, h("div", { class: "clock" }, h("span", { class: "wx" }, this.hud.sky, this.hud.season), this.hud.date, this.hud.clock), speeds));
     this.pad.append(
-      ...([["⟲", () => { game.view.goal.yaw += 0.5; }], ["⟳", () => { game.view.goal.yaw -= 0.5; }], ["⤒", () => { game.view.goal.pitch += 0.2; }], ["⤓", () => { game.view.goal.pitch -= 0.2; }],
-        ["＋", () => { game.view.goal.dist *= 0.75; }], ["－", () => { game.view.goal.dist *= 1.33; }]] as [string, () => void][]).map(([label, act]) => h("button", { onclick: act }, label)));
+      ...([["ccw", () => { game.view.goal.yaw += 0.5; }], ["cw", () => { game.view.goal.yaw -= 0.5; }], ["up", () => { game.view.goal.pitch += 0.2; }], ["down", () => { game.view.goal.pitch -= 0.2; }],
+        ["plus", () => { game.view.goal.dist *= 0.75; }], ["minus", () => { game.view.goal.dist *= 1.33; }]] as [IconName, () => void][]).map(([name, act]) => h("button", { onclick: act }, icon(name))));
     this.modal.addEventListener("click", (e) => { if (e.target === this.modal) this.closeModal(); });
-    this.root.append(this.markers, top, this.toasts, this.pad, this.advisor, this.panels.el, h("div", { class: "bottom" }, this.hint, h("div", { class: "tray-wrap" }, this.trayDesc, this.tray), this.toolbar), this.modal);
+    // A tap on the dimmed menu around options or help closes them.
+    this.root.addEventListener("click", (e) => { if (e.target === this.root && this.panels.current) this.panels.close(); });
+    this.tip.append(this.hint, this.trayDesc);
+    const bottom = h("div", { class: "bottom" }, this.tip, h("div", { class: "dock" }, h("div", { class: "tray-wrap" }, this.tray), this.toolbar));
+    this.root.append(this.markers, top, this.toasts, this.pad, this.advisor, this.panels.el, bottom, this.modal);
+    // Let the floating pieces keep clear of the top bar and the tools, whatever size they have.
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => {
+        if (top.offsetHeight) this.root.style.setProperty("--hud-h", top.offsetHeight + "px");
+        if (bottom.offsetHeight) this.root.style.setProperty("--dock-h", bottom.offsetHeight + "px");
+      });
+      ro.observe(top);
+      ro.observe(bottom);
+    }
     this.buildToolbar();
     this.toolChanged();
     this.update(true);
@@ -118,7 +153,7 @@ export class UI {
         class: "cat" + (this.cat === c.id ? " on" : "") + (locked ? " locked" : ""), "data-cat": c.id,
         title: locked ? t("ui.locked", { name: milestoneName(c.unlock) }) : t("cat." + c.id),
         onclick: () => { this.game.sound("click"); this.pickCat(c.id); },
-      }, h("span", { class: "ico" }, locked ? "🔒" : c.icon), h("span", { class: "lbl" }, t("cat." + c.id)));
+      }, icon(c.icon, "ico"), locked ? icon("lock", "badge") : null, h("span", { class: "lbl" }, t("cat." + c.id)));
     }));
   }
 
@@ -153,12 +188,12 @@ export class UI {
     this.refreshTools();
   }
 
-  private item(icon: string | HTMLElement, name: string, cost: string, on: boolean, unlock: number, act: () => void, title = ""): HTMLElement {
+  private item(ico: HTMLElement, name: string, cost: string, on: boolean, unlock: number, act: () => void, title = ""): HTMLElement {
     const locked = !this.city.unlocked(unlock);
     return h("button", {
       class: "item" + (on ? " on" : "") + (locked ? " locked" : ""), title: locked ? t("ui.locked", { name: milestoneName(unlock) }) : title,
       onclick: () => { if (locked) { this.toast("ui.locked", "warn", { name: milestoneName(unlock) }); this.game.sound("error"); return; } this.game.sound("click"); act(); this.trayKey = ""; this.buildTray(); },
-    }, typeof icon === "string" ? h("span", { class: "ico" }, locked ? "🔒" : icon) : icon, h("span", { class: "nm" }, name), cost ? h("span", { class: "cost" }, locked ? milestoneName(unlock) : cost) : null);
+    }, h("span", { class: "art" }, ico, locked ? icon("lock", "badge") : null), h("span", { class: "nm" }, name), cost ? h("span", { class: "cost" }, locked ? milestoneName(unlock) : cost) : null);
   }
 
   private describe(def: PlaceDef): string {
@@ -192,27 +227,27 @@ export class UI {
     } else if (this.cat === "zones" && tool.t === "zone") {
       for (let z = 1; z < ZONES.length; z++) {
         const zd = ZONES[z];
-        const ico = h("span", { class: "zone-ico", style: { background: "#" + zd.color.toString(16).padStart(6, "0") } }, ZONE_ICON[z]);
+        const ico = tile(ZONE_ICON[z], "#" + zd.color.toString(16).padStart(6, "0"), "zone");
         items.push(this.item(ico, t("z." + zd.key), "", tool.zone === z, zd.unlock, () => tools.set({ t: "zone", zone: z })));
       }
-      items.push(this.item("🧽", t("tool.dezone"), "", tool.zone === Zone.None, 0, () => tools.set({ t: "zone", zone: Zone.None })));
+      items.push(this.item(tile("eraser", "#ff8a8a"), t("tool.dezone"), "", tool.zone === Zone.None, 0, () => tools.set({ t: "zone", zone: Zone.None })));
       items.push(h("span", { class: "sep" }));
       BRUSHES.forEach((_, i) => items.push(h("button", { class: "mode brush" + (tools.brush === i ? " on" : ""), title: t("tool.brush"), onclick: () => { tools.brush = i; this.trayKey = ""; this.buildTray(); } }, h("i", { style: { width: 8 + i * 7 + "px", height: 8 + i * 7 + "px" } }))));
       desc = tool.zone ? t("zd." + ZONES[tool.zone].key) : "";
     } else if (this.cat === "views") {
       for (const v of VIEWS) {
-        items.push(this.item(VIEW_ICON[v], t("view." + (v || "none")), "", view.infoView === v, VIEW_UNLOCK[v] ?? 0, () => this.setView(v)));
+        items.push(this.item(tile(VIEW_ICON[v], VIEW_COLOR), t("view." + (v || "none")), "", view.infoView === v, VIEW_UNLOCK[v] ?? 0, () => this.setView(v)));
       }
     } else if (CAT_KINDS[this.cat]) {
       const kinds = PLACE.filter((p) => CAT_KINDS[this.cat]!.includes(p.cat));
       for (const def of kinds) {
-        items.push(this.item(def.icon, t("b." + def.key), money(def.cost), tool.t === "place" && tool.kind === def.kind, def.unlock, () => tools.set({ t: "place", kind: def.kind })));
+        items.push(this.item(tile(BUILDING_ICON[def.key] ?? "building", CAT_COLOR[def.cat] ?? VIEW_COLOR), t("b." + def.key), money(def.cost), tool.t === "place" && tool.kind === def.kind, def.unlock, () => tools.set({ t: "place", kind: def.kind })));
       }
       if (this.cat === "transit") {
         items.push(h("span", { class: "sep" }));
-        items.push(this.item("🚏", t("tool.busLine"), "", tool.t === "line" && !tool.metro, FEATURE_UNLOCK.transit, () => tools.set({ t: "line", metro: false })));
-        items.push(this.item("🚉", t("tool.metroLine"), "", tool.t === "line" && tool.metro, FEATURE_UNLOCK.metro, () => tools.set({ t: "line", metro: true })));
-        items.push(this.item("📋", t("tool.lines"), "", false, FEATURE_UNLOCK.transit, () => this.panels.open("transit")));
+        items.push(this.item(tile("busFront", CAT_COLOR.transit), t("tool.busLine"), "", tool.t === "line" && !tool.metro, FEATURE_UNLOCK.transit, () => tools.set({ t: "line", metro: false })));
+        items.push(this.item(tile("train", CAT_COLOR.transit), t("tool.metroLine"), "", tool.t === "line" && tool.metro, FEATURE_UNLOCK.metro, () => tools.set({ t: "line", metro: true })));
+        items.push(this.item(tile("list", CAT_COLOR.transit), t("tool.lines"), "", false, FEATURE_UNLOCK.transit, () => this.panels.open("transit")));
       }
       if (tool.t === "place") desc = this.describe(PLACE_BY_KIND.get(tool.kind)!);
     }
@@ -220,6 +255,7 @@ export class UI {
     this.tray.parentElement!.classList.toggle("hidden", !items.length);
     setText(this.trayDesc, desc);
     this.trayDesc.classList.toggle("hidden", !desc);
+    this.tipChanged();
   }
 
   setView(v: InfoView) {
@@ -231,6 +267,7 @@ export class UI {
   hintChanged() {
     const hint = this.game.tools.hint();
     this.hint.classList.toggle("hidden", !hint);
+    this.tipChanged();
     if (!hint) return;
     this.hint.classList.toggle("bad", !!hint.bad);
     fill(this.hint,
@@ -239,10 +276,15 @@ export class UI {
       ...hint.buttons.map((b) => h("button", { class: b.primary ? "primary" : "", onclick: () => { this.game.sound("click"); b.act(); } }, t(b.label))));
   }
 
+  /** The card over the tools shows what to do next and what the picked thing is; hidden when it has neither. */
+  private tipChanged() {
+    this.tip.classList.toggle("hidden", this.hint.classList.contains("hidden") && this.trayDesc.classList.contains("hidden"));
+  }
+
   // ------------------------------------------------------------------ messages
 
   toast(key: string, tone: Tone, args?: Record<string, string | number>, at?: { x: number; z: number }) {
-    const el = h("button", { class: "toast " + tone }, t(key, args), at ? h("span", { class: "go" }, "📍") : null);
+    const el = h("button", { class: "toast " + tone }, t(key, args), at ? icon("pin", "go") : null);
     el.addEventListener("click", () => {
       if (at) this.game.view.focus(at.x, at.z, Math.min(this.game.view.goal.dist, 260));
       el.remove();
@@ -334,14 +376,19 @@ export class UI {
     if (!on) return;
     const fresh = this.advice !== this.adviceSeen;
     if (!this.adviceOpen) {
-      fill(this.advisor, h("button", { class: "adv-mini" + (fresh ? " fresh" : ""), title: t("adv.name"), onclick: () => { this.adviceOpen = true; this.adviceSeen = this.advice; this.drawAdvisor(); } }, "🧑‍💼"));
+      fill(this.advisor, h("button", { class: "adv-mini" + (fresh ? " fresh" : ""), title: t("adv.name"), onclick: () => { this.adviceOpen = true; this.adviceSeen = this.advice; this.drawAdvisor(); } }, icon("user")));
       return;
     }
     this.adviceSeen = this.advice;
+    // On small screens the advice folds away by itself after a while; the face stays and lights up when there is news.
+    clearTimeout(this.adviceTimer);
+    if (matchMedia("(max-height: 520px), (max-width: 700px)").matches) {
+      this.adviceTimer = window.setTimeout(() => { this.adviceOpen = false; this.drawAdvisor(); }, 12000);
+    }
     fill(this.advisor, h("div", { class: "adv-box" },
-      h("span", { class: "face" }, "🧑‍💼"),
+      h("span", { class: "face" }, icon("user")),
       h("p", null, t(this.advice)),
-      h("button", { class: "x", title: t("adv.hide"), onclick: () => { this.adviceOpen = false; this.drawAdvisor(); } }, "✕")));
+      h("button", { class: "x", title: t("adv.hide"), "aria-label": t("adv.hide"), onclick: () => { this.adviceOpen = false; this.drawAdvisor(); } }, icon("x"))));
   }
 
   // ------------------------------------------------------------------ icons over buildings
@@ -366,7 +413,11 @@ export class UI {
     this.markerEls.forEach((el, i) => {
       const lot = this.markerLots[i];
       el.style.display = lot ? "" : "none";
-      if (lot) setText(el, PROBLEM_ICON[city.problem(lot)] ?? "❗");
+      if (lot) {
+        const [name, color] = PROBLEM_ICON[city.problem(lot)] ?? ["alert", "#e8432f"];
+        setIcon(el, name);
+        el.style.color = color;
+      }
     });
   }
 
@@ -396,24 +447,27 @@ export class UI {
     H.net.className = st.net >= 0 ? "plus" : "minus";
     H.money.className = !city.chill && city.money < 0 ? "minus" : "";
     setText(H.happy, st.pop > 0 ? pct(st.happy) : "–");
-    setText(H.happyIcon, st.happy > 0.75 ? "😄" : st.happy > 0.55 ? "🙂" : st.happy > 0.4 ? "😐" : "😠");
+    setIcon(H.happyIcon, st.pop <= 0 ? "smile" : st.happy > 0.75 ? "laugh" : st.happy > 0.55 ? "smile" : st.happy > 0.4 ? "meh" : "frown");
+    H.happyIcon.style.color = st.pop <= 0 ? "" : st.happy > 0.55 ? "var(--acc)" : st.happy > 0.4 ? "var(--warn)" : "var(--bad)";
     setText(H.traffic, pct(st.flow));
     const d = city.demand;
     ([d.r, d.c, d.i, d.o] as number[]).forEach((v, i) => {
       const bar = this.bars[i];
       bar.style.height = Math.round(Math.abs(v) * 50) + "%";
       bar.className = v >= 0 ? "up" : "down";
-      (bar.parentElement as HTMLElement).style.display = i === 3 && !city.unlocked(ZONES[Zone.Office].unlock) ? "none" : "";
+      (bar.closest(".bar") as HTMLElement).style.display = i === 3 && !city.unlocked(ZONES[Zone.Office].unlock) ? "none" : "";
     });
     const W = city.weather;
-    setText(H.sky, (SKY_ICON[W.sky] ?? "") + SEASON_ICON[W.season]);
+    setIcon(H.sky, SKY_ICON[W.sky] ?? "sun");
+    setIcon(H.season, SEASON_ICON[W.season]);
     const hour = Math.floor(city.hour);
     setText(H.date, `${t("ui.day", { n: (city.day % YEAR_DAYS) + 1 })} · ${t("ui.year", { n: Math.floor(city.day / YEAR_DAYS) + 1 })}`);
     setText(H.clock, `${String(hour).padStart(2, "0")}:00`);
-    (H.sky.parentElement as HTMLElement).title = `${t("season." + SEASONS[W.season])} · ${t("sky." + W.sky)} · ${H.date.textContent}`;
+    (H.sky.closest(".clock") as HTMLElement).title = `${t("season." + SEASONS[W.season])} · ${t("sky." + W.sky)} · ${H.date.textContent}`;
     const speeds = [0, 1, 2, 4];
     this.speedButtons.forEach((b, i) => b.classList.toggle("on", speeds[i] === this.game.speed));
     this.pad.classList.toggle("hidden", !this.game.settings.pad);
+    this.root.classList.toggle("has-pad", this.game.settings.pad);
 
     this.slow -= 1;
     if (this.slow <= 0 || force) {

@@ -36,5 +36,5 @@ export function short(n: number): string {
   if (a >= 10000) return (n / 1000).toFixed(a >= 1e5 ? 0 : 1).replace(/\.0$/, "") + "k";
   return num(n);
 }
-export const money = (n: number) => "🪙 " + num(n);
+export const money = (n: number) => (n < 0 ? "−$" : "$") + num(Math.abs(n));
 export const pct = (v: number) => Math.round(v * 100) + "%";
